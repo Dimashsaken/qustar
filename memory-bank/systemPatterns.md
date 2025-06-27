@@ -4,10 +4,11 @@
 
 ### Navigation Structure
 - **Expo Router**: File-based routing for type-safe navigation
-- **Tab Layout**: Bottom tabs for main sections
-  - `/app/(tabs)/index.tsx` → AllBirds screen
-  - `/app/(tabs)/search.tsx` → SearchScreen
+- **Tab Layout**: Bottom tabs for main sections (CONFIRMED WORKING)
+  - `/app/(tabs)/index.tsx` → AllBirds screen (Home tab)
+  - `/app/(tabs)/explore.tsx` → Example content (Explore tab)
   - `/app/bird/[id].tsx` → Bird detail page
+- **Route Priority**: Removed conflicting `app/index.tsx` to allow tab navigation
 
 ### Data Layer
 - **React Query v5**: Primary data fetching and caching strategy
@@ -71,13 +72,35 @@ User Input → Debounce → Search Strategy Decision → Results Update
 
 ### Navigation Flow
 ```
-List Item → Navigate to /bird/[id] → Detail Screen
+Home Tab → Bird List → Navigate to /bird/[id] → Detail Screen
+Explore Tab → Example Content
 ```
+
+## Routing Architecture
+
+### Confirmed Working Structure
+```
+app/
+├── _layout.tsx          # Root layout with React Query provider
+├── (tabs)/
+│   ├── _layout.tsx      # Tab navigator configuration
+│   ├── index.tsx        # Home tab - AllBirds screen
+│   └── explore.tsx      # Explore tab - Example content
+├── bird/
+│   └── [id].tsx         # Dynamic bird detail routes
+└── +not-found.tsx       # 404 error page
+```
+
+### Navigation Resolution
+- **Issue Fixed**: Removed conflicting `app/index.tsx` that overrode tab layout
+- **Current State**: Tab navigation working correctly with two bottom tabs
+- **Priority**: Tab layout takes precedence, allowing proper navigation
 
 ## Error Handling
 - React Query built-in error boundaries
 - Graceful offline degradation
 - Loading states for all async operations
+- Empty states for when database has no data
 
 ## Type Safety
 - **TypeScript Strict Mode**: Full type checking enabled
@@ -95,4 +118,18 @@ List Item → Navigate to /bird/[id] → Detail Screen
   supabase.ts  - Client configuration
 /types
   bird.ts      - Type definitions
+/memory-bank   - Documentation (excluded from git)
 ``` 
+
+## Navigation Best Practices Applied
+
+### Tab Structure
+- Clear separation between Home (bird data) and Explore (documentation)
+- Bottom tab navigation for easy mobile access
+- Proper tab icons and labels
+
+### Route Hierarchy
+- Root layout provides app-wide providers (React Query, themes)
+- Tab layout handles bottom navigation
+- Dynamic routes for individual bird pages
+- Error boundaries for graceful failure handling 

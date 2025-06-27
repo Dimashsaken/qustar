@@ -31,59 +31,64 @@ export const BirdImage: React.FC<BirdImageProps> = ({
   useEffect(() => {
     const getImageUrl = () => {
       try {
-        // Base S3 URL for Supabase storage
-        const baseS3Url = 'https://odmfmyrdaisfboswcidq.supabase.co/storage/v1/s3/qustar-images/bird-images';
-        
-        // Construct filename in format: {id}-{scientific-name-with-dashes}.jpeg
-        let filename;
-        
-        if (scientificName) {
-          // Convert scientific name to dash format: "Falco peregrinus" -> "Falco-peregrinus"
-          const nameWithDashes = scientificName.trim().replace(/\s+/g, '-');
-          filename = `${birdId}-${nameWithDashes}.jpeg`;
-        } else {
-          // Fallback to just ID if no scientific name
-          filename = `${birdId}.jpeg`;
-        }
-        
-        const fullUrl = `${baseS3Url}/${filename}`;
-        
-        console.log('🖼️ Generating S3 image URL for bird:', { birdId, scientificName, filename });
-        console.log('🖼️ S3 Image URL generated:', fullUrl);
-        
-        setImageUrl(fullUrl);
-        
-        // Test if image actually exists
-        fetch(fullUrl, { method: 'HEAD' })
-          .then(response => {
-            if (!response.ok) {
-              console.log('🖼️ S3 Image does not exist at URL, trying fallback:', fullUrl);
-              
-              // Try alternative filename format if first attempt fails
-              const fallbackFilename = `${birdId}.jpg`;
-              const fallbackUrl = `${baseS3Url}/${fallbackFilename}`;
-              
-              return fetch(fallbackUrl, { method: 'HEAD' })
-                .then(fallbackResponse => {
-                  if (fallbackResponse.ok) {
-                    console.log('🖼️ S3 Fallback image found:', fallbackUrl);
-                    setImageUrl(fallbackUrl);
-                  } else {
-                    console.log('🖼️ No S3 image found with either format');
-                    setImageError(true);
-                  }
-                });
-            } else {
-              console.log('🖼️ S3 Image found successfully:', fullUrl);
-            }
-          })
-          .catch(err => {
-            console.log('🖼️ Error checking S3 image existence:', err);
-            setImageError(true);
-          });
+        // Import supabase client for proper public URL generation
+        import('../lib/supabaseClient').then(({ supabase }) => {
+          // Construct filename in format: {id}-{scientific-name-with-dashes}.jpeg
+          let filename;
+          
+          if (scientificName) {
+            // Convert scientific name to dash format: "Falco peregrinus" -> "Falco-peregrinus"
+            const nameWithDashes = scientificName.trim().replace(/\s+/g, '-');
+            filename = `${birdId}-${nameWithDashes}.jpeg`;
+          } else {
+            // Fallback to just ID if no scientific name
+            filename = `${birdId}.jpeg`;
+          }
+          
+          // Use Supabase public URL method (more reliable than S3 direct)
+          const { data: publicUrl } = supabase.storage
+            .from('qustar-images')
+            .getPublicUrl(`bird-images/${filename}`);
+          
+          console.log('🖼️ Generating public image URL for bird:', { birdId, scientificName, filename });
+          console.log('🖼️ Public Image URL generated:', publicUrl.publicUrl);
+          
+          setImageUrl(publicUrl.publicUrl);
+          
+          // Test if image actually exists
+          fetch(publicUrl.publicUrl, { method: 'HEAD' })
+            .then(response => {
+              if (!response.ok) {
+                console.log('🖼️ Primary image does not exist, trying fallback:', publicUrl.publicUrl);
+                
+                // Try alternative filename format if first attempt fails
+                const fallbackFilename = `${birdId}.jpg`;
+                const { data: fallbackUrl } = supabase.storage
+                  .from('qustar-images')
+                  .getPublicUrl(`bird-images/${fallbackFilename}`);
+                
+                return fetch(fallbackUrl.publicUrl, { method: 'HEAD' })
+                  .then(fallbackResponse => {
+                    if (fallbackResponse.ok) {
+                      console.log('🖼️ Fallback image found:', fallbackUrl.publicUrl);
+                      setImageUrl(fallbackUrl.publicUrl);
+                    } else {
+                      console.log('🖼️ No image found with either format');
+                      setImageError(true);
+                    }
+                  });
+              } else {
+                console.log('🖼️ Image found successfully:', publicUrl.publicUrl);
+              }
+            })
+            .catch(err => {
+              console.log('🖼️ Error checking image existence:', err);
+              setImageError(true);
+            });
+        });
         
       } catch (error) {
-        console.error('🖼️ Error generating S3 image URL:', error);
+        console.error('🖼️ Error generating image URL:', error);
         setImageError(true);
       }
     };
@@ -120,6 +125,9 @@ export const BirdImage: React.FC<BirdImageProps> = ({
         <Text style={[styles.placeholderText, { fontSize: size * 0.375 }]}>
           🐦
         </Text>
+        <Text style={[styles.placeholderSubText, { fontSize: size * 0.15 }]}>
+          No Image
+        </Text>
       </View>
     );
   }
@@ -147,5 +155,9 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: '#666',
+  },
+  placeholderSubText: {
+    color: '#999',
+    marginTop: 2,
   },
 }); 

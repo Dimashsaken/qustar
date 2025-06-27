@@ -38,3 +38,6 @@ yarn-error.*
 
 app-example
 .env
+
+# Memory bank (documentation, contains sensitive info)
+memory-bank/
