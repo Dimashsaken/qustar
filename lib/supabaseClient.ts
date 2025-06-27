@@ -8,12 +8,6 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-console.log('🔧 Supabase Config:', {
-  url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'MISSING',
-  keyProvided: !!supabaseAnonKey,
-  keyLength: supabaseAnonKey?.length
-});
-
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables');
   throw new Error('Missing Supabase environment variables');
@@ -32,6 +26,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       eventsPerSecond: 2, // Limit realtime events for performance
     },
   },
-});
-
-console.log('✅ Supabase client created successfully'); 
+}); 

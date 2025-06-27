@@ -1,27 +1,38 @@
 import { FlashList } from '@shopify/flash-list';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { BirdCard } from '../../components/BirdCard';
 import { useBirds } from '../../hooks/useBirds';
+import { useImageCache } from '../../hooks/useImageCache';
+import { getPrimaryBirdImageUrl } from '../../lib/imageUtils';
 import type { BirdListItem } from '../../types/bird';
 
 /**
  * AllBirds screen - main landing page showing all Kazakhstan birds
  * Uses FlashList for optimal performance with large datasets in a 2-column grid
+ * Features optimized image caching and preloading for smooth scrolling
  * @returns JSX.Element - AllBirds screen component
  */
 export default function AllBirdsScreen() {
   const { data: birds, isLoading, error } = useBirds();
+  const { preloadImages } = useImageCache({ maxCacheSize: 150, maxCacheAge: 7200 });
 
-  // Debug logging to understand what's happening
+  // Generate image URLs for preloading
+  const imageUrls = useMemo(() => {
+    if (!birds) return [];
+    
+    return birds.slice(0, 50).map(bird => 
+      getPrimaryBirdImageUrl(bird.id, bird.scientific_name)
+    ).filter(url => url.length > 0); // Filter out empty URLs
+  }, [birds]);
+
+  // Preload images when bird data is available
   useEffect(() => {
-    console.log('🐦 AllBirdsScreen Debug:', {
-      isLoading,
-      error: error?.message,
-      birdsCount: birds?.length,
-      birdsData: birds?.slice(0, 3) // First 3 birds for inspection
-    });
-  }, [birds, isLoading, error]);
+    if (imageUrls.length > 0) {
+      // Preload first batch of images for smoother initial scrolling
+      preloadImages(imageUrls);
+    }
+  }, [imageUrls, preloadImages]);
 
   /**
    * Renders individual bird item for FlashList grid
@@ -31,6 +42,13 @@ export default function AllBirdsScreen() {
   const renderBird = ({ item }: { item: BirdListItem }) => (
     <BirdCard bird={item} variant="grid" />
   );
+
+  /**
+   * Optimized key extractor for FlashList performance
+   * @param item - Bird data
+   * @returns string - Unique key for the item
+   */
+  const keyExtractor = (item: BirdListItem): string => `bird-${item.id}`;
 
   /**
    * Renders loading state
@@ -76,21 +94,17 @@ export default function AllBirdsScreen() {
   );
 
   if (isLoading) {
-    console.log('🔄 Showing loading state');
     return renderLoading();
   }
 
   if (error) {
-    console.log('❌ Showing error state:', error.message);
     return renderError();
   }
 
   if (!birds || birds.length === 0) {
-    console.log('📭 Showing empty state');
     return renderEmpty();
   }
 
-  console.log('✅ Showing birds grid:', birds.length);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -103,11 +117,15 @@ export default function AllBirdsScreen() {
           data={birds}
           renderItem={renderBird}
           numColumns={2}
-          estimatedItemSize={200} // Increased for grid items
-          keyExtractor={(item) => item.id}
+          estimatedItemSize={200}
+          keyExtractor={keyExtractor}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.gridContent}
           ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+          // Performance optimizations
+          removeClippedSubviews={true}
+          onEndReachedThreshold={0.5}
+          getItemType={() => 'bird-card'}
         />
       </View>
     </SafeAreaView>

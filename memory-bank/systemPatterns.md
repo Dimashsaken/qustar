@@ -58,6 +58,33 @@ export const functionName = (prop: Type) => {
   - Online: Supabase `ilike` queries
 - **Multi-facet Filters**: Combinable filter chips
 
+### Image Display Patterns ✅
+
+#### Image Fitting Strategy
+```typescript
+// BirdImage component pattern
+<Image
+  contentFit="contain"  // Show complete image without cropping
+  style={{
+    backgroundColor: '#ffffff',  // Clean white background
+    borderRadius: 8,
+    overflow: 'hidden',  // Contain within borders
+  }}
+/>
+```
+
+#### Visual Design Principles
+- **Complete Visibility**: Priority on showing entire bird for identification
+- **Clean Backgrounds**: White (#ffffff) for professional appearance
+- **Proper Containment**: Images stay within rounded border boundaries
+- **Aspect Ratio Preservation**: Maintain original proportions for accuracy
+
+#### Image Performance Optimization
+- **Caching Strategy**: Disk-based caching with expo-image
+- **Memory Management**: Recycling keys and cleanup utilities
+- **Preloading**: First 50 images preloaded for smooth experience
+- **Multiple Fallbacks**: URL generation without excessive network requests
+
 ## Data Flow Patterns
 
 ### Bird Data
@@ -74,6 +101,11 @@ User Input → Debounce → Search Strategy Decision → Results Update
 ```
 Home Tab → Bird List → Navigate to /bird/[id] → Detail Screen
 Explore Tab → Example Content
+```
+
+### Image Loading Flow
+```
+BirdImage Component → Image URL Generation → Cache Check → Load/Display → Fallback if Needed
 ```
 
 ## Routing Architecture
@@ -101,6 +133,7 @@ app/
 - Graceful offline degradation
 - Loading states for all async operations
 - Empty states for when database has no data
+- Image fallback system with placeholder display
 
 ## Type Safety
 - **TypeScript Strict Mode**: Full type checking enabled
@@ -112,10 +145,13 @@ app/
 /components
   /ui          - Reusable UI components
   BirdCard.tsx - Specific bird components
+  BirdImage.tsx - Optimized image component with proper fitting
 /hooks
   useBirds.ts  - Data fetching hooks
+  useImageCache.ts - Image caching management
 /lib
   supabase.ts  - Client configuration
+  imageUtils.ts - Image URL generation and utilities
 /types
   bird.ts      - Type definitions
 /memory-bank   - Documentation (excluded from git)
@@ -132,4 +168,23 @@ app/
 - Root layout provides app-wide providers (React Query, themes)
 - Tab layout handles bottom navigation
 - Dynamic routes for individual bird pages
-- Error boundaries for graceful failure handling 
+- Error boundaries for graceful failure handling
+
+## Image Display Best Practices Applied ✅
+
+### User-Centric Design
+- Prioritize complete bird visibility for identification purposes
+- Clean, professional appearance suitable for field guide use
+- Consistent visual presentation across different image aspect ratios
+
+### Technical Implementation
+- `contentFit="contain"` ensures no cropping while maintaining aspect ratios
+- White backgrounds provide clean, modern appearance
+- `overflow: 'hidden'` maintains design boundaries
+- Performance optimizations preserved through caching system
+
+### Performance Considerations
+- Disk-based caching reduces network requests
+- Preloading strategy for smooth scrolling experience
+- Memory management prevents app slowdown
+- Multiple URL fallbacks without performance impact 

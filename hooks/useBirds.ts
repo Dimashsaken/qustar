@@ -8,8 +8,6 @@ import type { Bird, BirdListItem, BirdSearchFilters } from '../types/bird';
  * @returns Promise<BirdListItem[]> - Array of bird data for list display
  */
 const fetchBirds = async (filters?: BirdSearchFilters): Promise<BirdListItem[]> => {
-  console.log('🔍 fetchBirds: Starting data fetch from Supabase');
-
   // Build query according to Supabase documentation
   let query = supabase
     .from('qustar-info')
@@ -43,7 +41,6 @@ const fetchBirds = async (filters?: BirdSearchFilters): Promise<BirdListItem[]> 
     throw new Error(`Failed to fetch birds: ${error.message}`);
   }
 
-  console.log('✅ fetchBirds: Successfully fetched', data?.length, 'birds');
   return data || [];
 };
 

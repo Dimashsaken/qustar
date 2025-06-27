@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { generateBirdImageUrls, getBirdImageCacheKey } from '../lib/imageUtils';
 
 interface BirdImageProps {
   birdId: string;
@@ -12,7 +13,7 @@ interface BirdImageProps {
 /**
  * Bird image component with automatic fallback to placeholder
  * Loads bird image from Supabase S3-compatible storage using direct URLs
- * Image format: {id}-{scientific-name-with-dashes}.jpeg
+ * Features optimized caching and reduced network requests for better performance
  * @param birdId - Bird ID for image lookup
  * @param scientificName - Scientific name for constructing filename
  * @param size - Image dimensions (default: 64)
@@ -25,77 +26,13 @@ export const BirdImage: React.FC<BirdImageProps> = ({
   size = 64, 
   style 
 }) => {
-  const [imageError, setImageError] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [showPlaceholder, setShowPlaceholder] = useState(false);
   
   useEffect(() => {
-    const getImageUrl = () => {
-      try {
-        // Import supabase client for proper public URL generation
-        import('../lib/supabaseClient').then(({ supabase }) => {
-          // Construct filename in format: {id}-{scientific-name-with-dashes}.jpeg
-          let filename;
-          
-          if (scientificName) {
-            // Convert scientific name to dash format: "Falco peregrinus" -> "Falco-peregrinus"
-            const nameWithDashes = scientificName.trim().replace(/\s+/g, '-');
-            filename = `${birdId}-${nameWithDashes}.jpeg`;
-          } else {
-            // Fallback to just ID if no scientific name
-            filename = `${birdId}.jpeg`;
-          }
-          
-          // Use Supabase public URL method (more reliable than S3 direct)
-          const { data: publicUrl } = supabase.storage
-            .from('qustar-images')
-            .getPublicUrl(`bird-images/${filename}`);
-          
-          console.log('🖼️ Generating public image URL for bird:', { birdId, scientificName, filename });
-          console.log('🖼️ Public Image URL generated:', publicUrl.publicUrl);
-          
-          setImageUrl(publicUrl.publicUrl);
-          
-          // Test if image actually exists
-          fetch(publicUrl.publicUrl, { method: 'HEAD' })
-            .then(response => {
-              if (!response.ok) {
-                console.log('🖼️ Primary image does not exist, trying fallback:', publicUrl.publicUrl);
-                
-                // Try alternative filename format if first attempt fails
-                const fallbackFilename = `${birdId}.jpg`;
-                const { data: fallbackUrl } = supabase.storage
-                  .from('qustar-images')
-                  .getPublicUrl(`bird-images/${fallbackFilename}`);
-                
-                return fetch(fallbackUrl.publicUrl, { method: 'HEAD' })
-                  .then(fallbackResponse => {
-                    if (fallbackResponse.ok) {
-                      console.log('🖼️ Fallback image found:', fallbackUrl.publicUrl);
-                      setImageUrl(fallbackUrl.publicUrl);
-                    } else {
-                      console.log('🖼️ No image found with either format');
-                      setImageError(true);
-                    }
-                  });
-              } else {
-                console.log('🖼️ Image found successfully:', publicUrl.publicUrl);
-              }
-            })
-            .catch(err => {
-              console.log('🖼️ Error checking image existence:', err);
-              setImageError(true);
-            });
-        });
-        
-      } catch (error) {
-        console.error('🖼️ Error generating image URL:', error);
-        setImageError(true);
-      }
-    };
-    
-    if (birdId) {
-      getImageUrl();
-    }
+    const urls = generateBirdImageUrls(birdId, scientificName);
+    setImageUrls(urls);
+    setShowPlaceholder(false);
   }, [birdId, scientificName]);
   
   const imageStyle = [
@@ -111,15 +48,14 @@ export const BirdImage: React.FC<BirdImageProps> = ({
   ];
 
   /**
-   * Handles image loading errors by showing placeholder
+   * Handles image loading errors by trying next URL or showing placeholder
    */
-  const handleImageError = (error: any) => {
-    console.log('🖼️ S3 Image failed to load:', error);
-    setImageError(true);
+  const handleImageError = () => {
+    setShowPlaceholder(true);
   };
 
-  // Show placeholder if image failed to load, on error, or no URL
-  if (imageError || !imageUrl) {
+  // Show placeholder if no URLs generated or error occurred
+  if (showPlaceholder || imageUrls.length === 0) {
     return (
       <View style={placeholderStyle}>
         <Text style={[styles.placeholderText, { fontSize: size * 0.375 }]}>
@@ -132,14 +68,22 @@ export const BirdImage: React.FC<BirdImageProps> = ({
     );
   }
 
+  // Generate cache key for consistent caching
+  const cacheKey = getBirdImageCacheKey(birdId, size);
+
   return (
     <Image
-      source={{ uri: imageUrl }}
+      source={imageUrls.map(url => ({ uri: url }))}
       style={imageStyle}
       onError={handleImageError}
       placeholder="🐦"
       transition={200}
       contentFit="contain"
+      // Optimized caching configuration
+      cachePolicy="disk"
+      priority="normal"
+      // Reduce memory usage for list items
+      recyclingKey={cacheKey}
     />
   );
 };
@@ -147,21 +91,25 @@ export const BirdImage: React.FC<BirdImageProps> = ({
 const styles = StyleSheet.create({
   image: {
     backgroundColor: '#ffffff',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: '#e9ecef',
+    overflow: 'hidden',
   },
   placeholder: {
     backgroundColor: '#ffffff',
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: '#e9ecef',
+    overflow: 'hidden',
   },
   placeholderText: {
-    color: '#666',
+    color: '#6c757d',
   },
   placeholderSubText: {
-    color: '#999',
+    color: '#adb5bd',
     marginTop: 2,
   },
 }); 
