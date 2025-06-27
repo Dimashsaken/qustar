@@ -1,75 +1,184 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { BirdCard } from '../../components/BirdCard';
+import { useBirds } from '../../hooks/useBirds';
+import type { BirdListItem } from '../../types/bird';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+/**
+ * AllBirds screen - main landing page showing all Kazakhstan birds
+ * Uses FlashList for optimal performance with large datasets
+ * @returns JSX.Element - AllBirds screen component
+ */
+export default function AllBirdsScreen() {
+  const { data: birds, isLoading, error } = useBirds();
 
-export default function HomeScreen() {
+  // Debug logging to understand what's happening
+  useEffect(() => {
+    console.log('🐦 AllBirdsScreen Debug:', {
+      isLoading,
+      error: error?.message,
+      birdsCount: birds?.length,
+      birdsData: birds?.slice(0, 3) // First 3 birds for inspection
+    });
+  }, [birds, isLoading, error]);
+
+  /**
+   * Renders individual bird item for FlashList
+   * @param item - Bird data to render
+   * @returns JSX.Element - BirdCard component
+   */
+  const renderBird = ({ item }: { item: BirdListItem }) => (
+    <BirdCard bird={item} />
+  );
+
+  /**
+   * Renders loading state
+   * @returns JSX.Element - Loading indicator
+   */
+  const renderLoading = () => (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#0066cc" />
+        <Text style={styles.loadingText}>Loading Kazakhstan birds...</Text>
+      </View>
+    </SafeAreaView>
+  );
+
+  /**
+   * Renders error state
+   * @returns JSX.Element - Error message
+   */
+  const renderError = () => (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Failed to load birds</Text>
+        <Text style={styles.errorSubtext}>
+          {error?.message || 'Please check your connection and try again'}
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+
+  /**
+   * Renders empty state
+   * @returns JSX.Element - Empty state message
+   */
+  const renderEmpty = () => (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
+        <Text style={styles.emptyText}>No birds found</Text>
+        <Text style={styles.emptySubtext}>
+          The bird database appears to be empty. Please check your connection and try again.
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+
+  if (isLoading) {
+    console.log('🔄 Showing loading state');
+    return renderLoading();
+  }
+
+  if (error) {
+    console.log('❌ Showing error state:', error.message);
+    return renderError();
+  }
+
+  if (!birds || birds.length === 0) {
+    console.log('📭 Showing empty state');
+    return renderEmpty();
+  }
+
+  console.log('✅ Showing birds list:', birds.length);
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Kazakhstan Birds</Text>
+          <Text style={styles.subtitle}>{birds.length} species</Text>
+        </View>
+        
+        <FlashList
+          data={birds}
+          renderItem={renderBird}
+          estimatedItemSize={88} // Approximate height of BirdCard
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
-  stepContainer: {
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#212529',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6c757d',
+  },
+  listContent: {
+    paddingVertical: 8,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6c757d',
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#dc3545',
+    textAlign: 'center',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  errorSubtext: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#adb5bd',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
   },
 });

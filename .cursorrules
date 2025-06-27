@@ -1,0 +1,107 @@
+# QuStar - Kazakhstan Bird Identifier
+
+## Project Intelligence
+
+This is a React Native app built with Expo SDK 53 for bird identification in Kazakhstan. The project follows strict patterns and has specific architectural decisions that should be maintained.
+
+## Critical Implementation Paths
+
+### File Size Constraint
+- **MUST**: Keep all files ≤ 120 lines of code
+- **Pattern**: Split complex components into smaller, focused files
+- **Example**: Create separate hooks, types, and utility files rather than large components
+
+### TypeScript Strictness
+- **MUST**: Use TypeScript strict mode throughout
+- **Pattern**: All exports require JSDoc documentation
+- **Example**: 
+```typescript
+/**
+ * Hook for fetching and caching bird data from Supabase
+ * @returns Object with bird data and loading state
+ */
+export const useBirds = () => {
+  // Implementation
+};
+```
+
+### Component Patterns
+- **MUST**: Use functional components only (no class components)
+- **MUST**: Use React Query v5 for all data fetching (no Redux)
+- **Pattern**: Singleton Supabase client in `lib/supabaseClient.ts`
+
+### Performance Requirements
+- **MUST**: Use FlashList for any lists with >20 items
+- **MUST**: Implement 300ms debounce for search inputs
+- **MUST**: Cache bird data for 1 hour using React Query
+- **Pattern**: 64×64 thumbnails for list views, full resolution for detail
+
+## User Workflow Preferences
+
+### Development Approach
+- Start with core infrastructure (Supabase + data layer)
+- Build screens incrementally (AllBirds → Search → Detail)
+- Test each component thoroughly before moving on
+- Maintain strict TypeScript compliance
+
+### Code Organization
+```
+/lib - Supabase client and core utilities
+/hooks - React Query hooks and custom logic
+/types - TypeScript interfaces and types
+/components - Reusable UI components (≤120 LoC each)
+/app - Expo Router screens and navigation
+```
+
+## Project-Specific Patterns
+
+### Supabase Integration
+- Environment variables: `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+- Database table: `birds` with specific schema
+- Image pattern: `{bucket}/birds/{id}.jpg`
+- No server-side auth (using anon key for read-only access)
+
+### Search Strategy
+- **Online**: Supabase `ilike` queries for accuracy
+- **Offline**: fuse.js fuzzy search on cached data
+- **Hybrid**: Detect connectivity and switch automatically
+- **Filters**: family, color, size, conservation status
+
+### Internationalization
+- **Languages**: Kazakh (kz), Russian (ru), English (en)
+- **Library**: i18next with expo-localization
+- **Pattern**: Device locale detection with fallback to English
+- **Data**: Database has `name_kz`, `name_ru`, `name_en` columns
+
+## Known Challenges
+
+### Performance Considerations
+- Large bird datasets require careful memory management
+- Image loading optimization critical for smooth scrolling
+- Search performance must work well both online and offline
+
+### Technical Constraints
+- Supabase project assumed to be pre-configured
+- Bird images must exist in public storage bucket
+- Database schema is fixed and cannot be modified
+
+## Evolution Notes
+
+### Architecture Decisions Made
+- Chose React Query over Redux for simpler state management
+- Expo Router selected for type-safe navigation
+- FlashList chosen for performance with large lists
+- Hybrid search strategy to support offline use
+
+### Future Considerations
+- Detail screen currently placeholder - will need comprehensive design
+- Internationalization setup needed for multi-language support
+- Offline data sync strategy may need refinement
+- Performance monitoring will be critical with full dataset
+
+## Critical Success Factors
+1. Maintain file size limits to keep codebase manageable
+2. Ensure smooth scrolling performance with large bird lists
+3. Implement robust error handling for network issues
+4. Keep TypeScript strict mode compliance throughout
+5. Document all patterns for future team members 
