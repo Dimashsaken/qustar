@@ -7,7 +7,7 @@ import type { BirdListItem } from '../../types/bird';
 
 /**
  * AllBirds screen - main landing page showing all Kazakhstan birds
- * Uses FlashList for optimal performance with large datasets
+ * Uses FlashList for optimal performance with large datasets in a 2-column grid
  * @returns JSX.Element - AllBirds screen component
  */
 export default function AllBirdsScreen() {
@@ -24,12 +24,12 @@ export default function AllBirdsScreen() {
   }, [birds, isLoading, error]);
 
   /**
-   * Renders individual bird item for FlashList
+   * Renders individual bird item for FlashList grid
    * @param item - Bird data to render
-   * @returns JSX.Element - BirdCard component
+   * @returns JSX.Element - BirdCard component styled for grid
    */
   const renderBird = ({ item }: { item: BirdListItem }) => (
-    <BirdCard bird={item} />
+    <BirdCard bird={item} variant="grid" />
   );
 
   /**
@@ -90,7 +90,7 @@ export default function AllBirdsScreen() {
     return renderEmpty();
   }
 
-  console.log('✅ Showing birds list:', birds.length);
+  console.log('✅ Showing birds grid:', birds.length);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -102,10 +102,12 @@ export default function AllBirdsScreen() {
         <FlashList
           data={birds}
           renderItem={renderBird}
-          estimatedItemSize={88} // Approximate height of BirdCard
+          numColumns={2}
+          estimatedItemSize={200} // Increased for grid items
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={styles.gridContent}
+          ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
         />
       </View>
     </SafeAreaView>
@@ -139,8 +141,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6c757d',
   },
-  listContent: {
-    paddingVertical: 8,
+  gridContent: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  itemSeparator: {
+    height: 4,
   },
   centerContainer: {
     flex: 1,

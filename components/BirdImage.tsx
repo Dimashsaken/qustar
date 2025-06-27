@@ -100,13 +100,13 @@ export const BirdImage: React.FC<BirdImageProps> = ({
   
   const imageStyle = [
     styles.image,
-    { width: size, height: size, borderRadius: size / 2 },
+    { width: size, height: size },
     style
   ];
 
   const placeholderStyle = [
     styles.placeholder,
-    { width: size, height: size, borderRadius: size / 2 },
+    { width: size, height: size },
     style
   ];
 
@@ -139,19 +139,23 @@ export const BirdImage: React.FC<BirdImageProps> = ({
       onError={handleImageError}
       placeholder="🐦"
       transition={200}
-      contentFit="cover"
+      contentFit="contain"
     />
   );
 };
 
 const styles = StyleSheet.create({
   image: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   placeholder: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   placeholderText: {
     color: '#666',
