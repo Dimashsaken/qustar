@@ -2,6 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Dimensions, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BirdImage } from '../../components/BirdImage';
+import { ThemedText } from '../../components/ThemedText';
+import { Colors, DesignTokens } from '../../constants/Colors';
 import { useBird } from '../../hooks/useBirds';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -9,6 +11,7 @@ const HERO_HEIGHT = screenHeight * 0.35; // 35% of screen height
 
 /**
  * Bird detail screen showing comprehensive bird information
+ * Implements mobile-first design with sky-blue accents and clean card layout
  * Features a hero image layout with detailed bird data
  * @returns JSX.Element - Bird detail screen component
  */
@@ -23,8 +26,10 @@ export default function BirdDetailScreen() {
   const renderLoading = () => (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0066cc" />
-        <Text style={styles.loadingText}>Loading bird details...</Text>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <ThemedText type="default" style={styles.loadingText}>
+          Loading bird details...
+        </ThemedText>
       </View>
     </SafeAreaView>
   );
@@ -36,12 +41,16 @@ export default function BirdDetailScreen() {
   const renderError = () => (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Failed to load bird details</Text>
-        <Text style={styles.errorSubtext}>
+        <ThemedText type="title" style={styles.errorText}>
+          Failed to load bird details
+        </ThemedText>
+        <ThemedText type="default" style={styles.errorSubtext}>
           {error?.message || 'Please check your connection and try again'}
-        </Text>
+        </ThemedText>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonTextWhite}>Go Back</Text>
+          <ThemedText type="bold" style={styles.backButtonTextWhite}>
+            Back
+          </ThemedText>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -54,12 +63,16 @@ export default function BirdDetailScreen() {
   const renderNotFound = () => (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Bird not found</Text>
-        <Text style={styles.errorSubtext}>
+        <ThemedText type="title" style={styles.errorText}>
+          Bird not found
+        </ThemedText>
+        <ThemedText type="default" style={styles.errorSubtext}>
           The requested bird could not be found in our database
-        </Text>
+        </ThemedText>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonTextWhite}>Go Back</Text>
+          <ThemedText type="bold" style={styles.backButtonTextWhite}>
+            Go Back
+          </ThemedText>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -93,9 +106,7 @@ export default function BirdDetailScreen() {
             style={styles.heroImage} 
           />
           
-
-          
-          {/* Small back button at top */}
+          {/* Back button with new design system */}
           <Pressable style={styles.backButtonOverlay} onPress={() => router.back()}>
             <Text style={styles.backButtonIcon}>←</Text>
           </Pressable>
@@ -105,27 +116,41 @@ export default function BirdDetailScreen() {
         <View style={styles.contentCard}>
           {/* Bird name section at top of content */}
           <View style={styles.titleSection}>
-            <Text style={styles.mainTitle}>{displayName}</Text>
+            <ThemedText type="heading" style={styles.mainTitle}>
+              {displayName}
+            </ThemedText>
             {bird.scientific_name && (
-              <Text style={styles.scientificName}>{bird.scientific_name}</Text>
+              <ThemedText type="default" style={styles.scientificName}>
+                {bird.scientific_name}
+              </ThemedText>
             )}
           </View>
           
           {/* Multi-language names */}
           {(kazakhName || russianName) && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Alternative Names</Text>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Alternative Names
+              </ThemedText>
               <View style={styles.sectionDivider} />
               {kazakhName && (
                 <View style={styles.nameRow}>
-                  <Text style={styles.nameLabel}>Kazakh:</Text>
-                  <Text style={styles.nameValue}>{kazakhName}</Text>
+                  <ThemedText type="bold" style={styles.nameLabel}>
+                    Kazakh:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.nameValue}>
+                    {kazakhName}
+                  </ThemedText>
                 </View>
               )}
               {russianName && (
                 <View style={styles.nameRow}>
-                  <Text style={styles.nameLabel}>Russian:</Text>
-                  <Text style={styles.nameValue}>{russianName}</Text>
+                  <ThemedText type="bold" style={styles.nameLabel}>
+                    Russian:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.nameValue}>
+                    {russianName}
+                  </ThemedText>
                 </View>
               )}
             </View>
@@ -134,18 +159,28 @@ export default function BirdDetailScreen() {
           {/* Classification */}
           {(bird.family || bird.order) && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Classification</Text>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Classification
+              </ThemedText>
               <View style={styles.sectionDivider} />
               {bird.family && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Family:</Text>
-                  <Text style={styles.infoValue}>{bird.family}</Text>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Family:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
+                    {bird.family}
+                  </ThemedText>
                 </View>
               )}
               {bird.order && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Order:</Text>
-                  <Text style={styles.infoValue}>{bird.order}</Text>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Order:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
+                    {bird.order}
+                  </ThemedText>
                 </View>
               )}
             </View>
@@ -154,36 +189,48 @@ export default function BirdDetailScreen() {
           {/* Physical characteristics */}
           {(bird.size || bird.length_cm_min || bird.wingspan_cm_min || bird.weight_g_min) && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Physical Characteristics</Text>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Physical Characteristics
+              </ThemedText>
               <View style={styles.sectionDivider} />
               {bird.size && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Size:</Text>
-                  <Text style={styles.infoValue}>{bird.size}</Text>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Size:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
+                    {bird.size}
+                  </ThemedText>
                 </View>
               )}
               {(bird.length_cm_min || bird.length_cm_max) && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Length:</Text>
-                  <Text style={styles.infoValue}>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Length:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
                     {bird.length_cm_min}-{bird.length_cm_max} cm
-                  </Text>
+                  </ThemedText>
                 </View>
               )}
               {(bird.wingspan_cm_min || bird.wingspan_cm_max) && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Wingspan:</Text>
-                  <Text style={styles.infoValue}>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Wingspan:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
                     {bird.wingspan_cm_min}-{bird.wingspan_cm_max} cm
-                  </Text>
+                  </ThemedText>
                 </View>
               )}
               {(bird.weight_g_min || bird.weight_g_max) && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Weight:</Text>
-                  <Text style={styles.infoValue}>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Weight:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
                     {bird.weight_g_min}-{bird.weight_g_max} g
-                  </Text>
+                  </ThemedText>
                 </View>
               )}
             </View>
@@ -192,13 +239,17 @@ export default function BirdDetailScreen() {
           {/* Status in Kazakhstan */}
           {bird.status_kz && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Status in Kazakhstan</Text>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Status in Kazakhstan
+              </ThemedText>
               <View style={styles.sectionDivider} />
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Status:</Text>
-                <Text style={[styles.infoValue, styles.conservationStatus]}>
+                <ThemedText type="bold" style={styles.infoLabel}>
+                  Status:
+                </ThemedText>
+                <ThemedText type="default" style={[styles.infoValue, styles.conservationStatus]}>
                   {bird.status_kz}
-                </Text>
+                </ThemedText>
               </View>
             </View>
           )}
@@ -206,24 +257,38 @@ export default function BirdDetailScreen() {
           {/* Additional characteristics */}
           {(bird.primary_colors || bird.body_type || bird.beak_type) && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Characteristics</Text>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Characteristics
+              </ThemedText>
               <View style={styles.sectionDivider} />
               {bird.primary_colors && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Colors:</Text>
-                  <Text style={styles.infoValue}>{bird.primary_colors}</Text>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Colors:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
+                    {bird.primary_colors}
+                  </ThemedText>
                 </View>
               )}
               {bird.body_type && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Body Type:</Text>
-                  <Text style={styles.infoValue}>{bird.body_type}</Text>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Body Type:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
+                    {bird.body_type}
+                  </ThemedText>
                 </View>
               )}
               {bird.beak_type && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Beak Type:</Text>
-                  <Text style={styles.infoValue}>{bird.beak_type}</Text>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Beak Type:
+                  </ThemedText>
+                  <ThemedText type="default" style={styles.infoValue}>
+                    {bird.beak_type}
+                  </ThemedText>
                 </View>
               )}
             </View>
@@ -232,27 +297,39 @@ export default function BirdDetailScreen() {
           {/* Habitat information */}
           {bird.habitat && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Habitat</Text>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Habitat
+              </ThemedText>
               <View style={styles.sectionDivider} />
-              <Text style={styles.habitatText}>{bird.habitat}</Text>
+              <ThemedText type="default" style={styles.habitatText}>
+                {bird.habitat}
+              </ThemedText>
             </View>
           )}
 
           {/* Additional notes */}
           {bird.notes && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Notes</Text>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Notes
+              </ThemedText>
               <View style={styles.sectionDivider} />
-              <Text style={styles.descriptionText}>{bird.notes}</Text>
+              <ThemedText type="default" style={styles.descriptionText}>
+                {bird.notes}
+              </ThemedText>
             </View>
           )}
 
           {/* Subspecies in Kazakhstan */}
           {bird.subspecies_in_kz && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Subspecies in Kazakhstan</Text>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Subspecies in Kazakhstan
+              </ThemedText>
               <View style={styles.sectionDivider} />
-              <Text style={styles.descriptionText}>{bird.subspecies_in_kz}</Text>
+              <ThemedText type="default" style={styles.descriptionText}>
+                {bird.subspecies_in_kz}
+              </ThemedText>
             </View>
           )}
         </View>
@@ -264,18 +341,18 @@ export default function BirdDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: { 
     flex: 1, 
-    backgroundColor: '#f5f7fa' 
+    backgroundColor: Colors.light.surfaceAlt 
   },
   container: { 
     flex: 1, 
-    backgroundColor: '#f5f7fa' 
+    backgroundColor: Colors.light.surfaceAlt 
   },
   
   // Hero section styles
   heroContainer: {
     height: HERO_HEIGHT,
     position: 'relative',
-    backgroundColor: '#f8f9fa'
+    backgroundColor: Colors.light.surfaceAlt
   },
   heroImage: {
     width: screenWidth,
@@ -286,132 +363,105 @@ const styles = StyleSheet.create({
 
   backButtonOverlay: {
     position: 'absolute',
-    top: 10,
-    left: 15,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    top: DesignTokens.spacing.lg,
+    left: DesignTokens.spacing.lg,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.light.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
+    ...DesignTokens.shadows.card,
     zIndex: 3,
   },
   backButtonIcon: {
-    color: '#1a1a1a',
-    fontSize: 18,
+    color: Colors.light.text,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   
   // Content card with elevation
   contentCard: {
-    marginTop: -20,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 32,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 8,
+    marginTop: -DesignTokens.spacing.xl,
+    backgroundColor: Colors.light.surface,
+    borderTopLeftRadius: DesignTokens.spacing.xxl,
+    borderTopRightRadius: DesignTokens.spacing.xxl,
+    paddingTop: DesignTokens.spacing.xxl * 1.5,
+    paddingHorizontal: DesignTokens.spacing.xl,
+    paddingBottom: DesignTokens.spacing.xxl * 2,
+    ...DesignTokens.shadows.card,
     zIndex: 2,
   },
   
   // Section cards
   sectionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: Colors.light.surface,
+    borderRadius: DesignTokens.borderRadius.card,
+    padding: DesignTokens.spacing.xl,
+    marginBottom: DesignTokens.spacing.xl,
+    ...DesignTokens.shadows.subtle,
     borderWidth: 1,
-    borderColor: '#f0f2f5',
+    borderColor: Colors.light.border,
   },
   sectionTitle: { 
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    color: Colors.light.text,
     letterSpacing: -0.5,
-    marginBottom: 8,
+    marginBottom: DesignTokens.spacing.sm,
   },
   sectionDivider: {
     height: 1,
-    backgroundColor: '#e9ecef',
-    marginBottom: 16,
+    backgroundColor: Colors.light.divider,
+    marginBottom: DesignTokens.spacing.lg,
   },
   
   // Name rows with enhanced styling
   nameRow: { 
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    marginBottom: DesignTokens.spacing.md,
+    paddingVertical: DesignTokens.spacing.md,
+    paddingHorizontal: DesignTokens.spacing.lg,
+    backgroundColor: Colors.light.surfaceAlt,
+    borderRadius: DesignTokens.borderRadius.card,
     borderLeftWidth: 4,
-    borderLeftColor: '#0066cc',
+    borderLeftColor: Colors.light.primary,
   },
   nameLabel: { 
-    fontWeight: '700',
     width: 80,
-    color: '#495057',
-    fontSize: 16,
+    color: Colors.light.textSecondary,
   },
   nameValue: { 
     flex: 1,
-    color: '#212529',
-    fontSize: 16,
-    fontWeight: '500',
+    color: Colors.light.text,
   },
   
   // Info rows with better contrast
   infoRow: { 
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
-    paddingVertical: 8,
+    marginBottom: DesignTokens.spacing.md,
+    paddingVertical: DesignTokens.spacing.sm,
   },
   infoLabel: { 
-    fontWeight: '700',
     width: 100,
-    color: '#6c757d',
-    fontSize: 15,
+    color: Colors.light.textMuted,
   },
   infoValue: { 
     flex: 1,
-    color: '#212529',
-    fontSize: 16,
-    fontWeight: '500',
+    color: Colors.light.text,
   },
   conservationStatus: {
-    fontWeight: '700',
-    color: '#0066cc',
+    color: Colors.light.primary,
   },
   
   // Text content with better spacing
   habitatText: {
-    fontSize: 16,
-    lineHeight: 26,
-    color: '#495057',
-    fontWeight: '400',
+    lineHeight: 24,
+    color: Colors.light.textSecondary,
   },
   descriptionText: {
-    fontSize: 16,
-    lineHeight: 26,
-    color: '#495057',
-    fontWeight: '400',
+    lineHeight: 24,
+    color: Colors.light.textSecondary,
   },
   
   // Loading and error states
@@ -419,50 +469,42 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32 
+    padding: DesignTokens.spacing.xxl * 1.5 
   },
   loadingText: { 
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6c757d' 
+    marginTop: DesignTokens.spacing.lg,
+    color: Colors.light.textSecondary,
   },
   errorText: { 
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#dc3545',
     textAlign: 'center',
-    marginBottom: 8 
+    marginBottom: DesignTokens.spacing.sm,
+    color: Colors.light.error,
   },
   errorSubtext: { 
-    fontSize: 14,
-    color: '#6c757d',
     textAlign: 'center',
-    marginBottom: 16 
+    marginBottom: DesignTokens.spacing.lg,
+    color: Colors.light.textMuted,
   },
   backButton: { 
-    backgroundColor: '#0066cc',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6 
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingVertical: DesignTokens.spacing.md,
+    borderRadius: DesignTokens.borderRadius.button,
   },
   backButtonTextWhite: { 
-    color: '#fff',
-    fontWeight: 'bold' 
+    color: Colors.light.surface,
   },
   
   // Bird name section at top of content
   titleSection: {
-    marginBottom: 20,
+    marginBottom: DesignTokens.spacing.xl,
   },
   mainTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    color: Colors.light.text,
+    marginBottom: DesignTokens.spacing.xs,
   },
   scientificName: {
-    fontSize: 16,
     fontStyle: 'italic',
-    color: '#6c757d',
+    color: Colors.light.textSecondary,
   },
 }); 

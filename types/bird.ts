@@ -43,6 +43,7 @@ export interface BirdListItem {
 
 /**
  * Search filter options for bird queries
+ * @deprecated Use BirdSearchFilters from './filters' instead
  */
 export interface BirdSearchFilters {
   family?: string;

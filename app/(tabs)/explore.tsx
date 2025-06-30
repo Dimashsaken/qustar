@@ -1,99 +1,150 @@
-import { Image } from 'expo-image';
-import { Platform, SafeAreaView, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ColorFilter } from '../../components/filters/ColorFilter';
+import { HabitatFilter } from '../../components/filters/HabitatFilter';
+import { SizeFilter } from '../../components/filters/SizeFilter';
+import { IconSymbol } from '../../components/ui/IconSymbol';
+import { Colors, DesignTokens } from '../../constants/Colors';
+import type { SizeCategory } from '../../types/filters';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+/**
+ * Главный экран исследования птиц с комплексной системой фильтрации
+ * Позволяет искать птиц по цвету, местообитанием и размеру с местными эталонами
+ */
+export default function ExploreScreen() {
+  // Состояние фильтров
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedHabitats, setSelectedHabitats] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<SizeCategory[]>([]);
 
-export default function TabTwoScreen() {
+  // Обработчики переключения фильтров
+  const handleColorToggle = useCallback((colorId: string) => {
+    setSelectedColors(prev => 
+      prev.includes(colorId) 
+        ? prev.filter(id => id !== colorId)
+        : [...prev, colorId]
+    );
+  }, []);
+
+  const handleHabitatToggle = useCallback((habitatId: string) => {
+    setSelectedHabitats(prev => 
+      prev.includes(habitatId) 
+        ? prev.filter(id => id !== habitatId)
+        : [...prev, habitatId]
+    );
+  }, []);
+
+  const handleSizeToggle = useCallback((sizeId: string) => {
+    const sizeCat = sizeId as SizeCategory;
+    setSelectedSizes(prev => 
+      prev.includes(sizeCat) 
+        ? prev.filter(id => id !== sizeCat)
+        : [...prev, sizeCat]
+    );
+  }, []);
+
+  // Сброс всех фильтров
+  const handleClearFilters = useCallback(() => {
+    setSelectedColors([]);
+    setSelectedHabitats([]);
+    setSelectedSizes([]);
+  }, []);
+
+  // Проверка наличия активных фильтров
+  const hasActiveFilters = selectedColors.length > 0 || 
+                          selectedHabitats.length > 0 || 
+                          selectedSizes.length > 0;
+
+  // Навигация к результатам поиска
+  const handleSearch = useCallback(() => {
+    if (!hasActiveFilters) return;
+
+    const params = new URLSearchParams();
+    
+    if (selectedColors.length > 0) {
+      params.set('colors', JSON.stringify(selectedColors));
+    }
+    if (selectedHabitats.length > 0) {
+      params.set('habitat', JSON.stringify(selectedHabitats));
+    }
+    if (selectedSizes.length > 0) {
+      params.set('sizeCategory', JSON.stringify(selectedSizes));
+    }
+
+    router.push(`/results?${params.toString()}`);
+  }, [selectedColors, selectedHabitats, selectedSizes, hasActiveFilters]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ParallaxScrollView
-        headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-        headerImage={
-          <IconSymbol
-            size={310}
-            color="#808080"
-            name="chevron.left.forwardslash.chevron.right"
-            style={styles.headerImage}
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Поиск птиц</Text>
+          <Text style={styles.subtitle}>
+            Определите птицу по её характеристикам
+          </Text>
+        </View>
+
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <ColorFilter
+            selectedColors={selectedColors}
+            onColorToggle={handleColorToggle}
           />
-        }>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="title">Explore</ThemedText>
-        </ThemedView>
-        <ThemedText>This app includes example code to help you get started.</ThemedText>
-        <Collapsible title="File-based routing">
-          <ThemedText>
-            This app has two screens:{' '}
-            <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-            <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-          </ThemedText>
-          <ThemedText>
-            The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-            sets up the tab navigator.
-          </ThemedText>
-          <ExternalLink href="https://docs.expo.dev/router/introduction">
-            <ThemedText type="link">Learn more</ThemedText>
-          </ExternalLink>
-        </Collapsible>
-        <Collapsible title="Android, iOS, and web support">
-          <ThemedText>
-            You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-            <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-          </ThemedText>
-        </Collapsible>
-        <Collapsible title="Images">
-          <ThemedText>
-            For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-            <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-            different screen densities
-          </ThemedText>
-          <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-          <ExternalLink href="https://reactnative.dev/docs/images">
-            <ThemedText type="link">Learn more</ThemedText>
-          </ExternalLink>
-        </Collapsible>
-        <Collapsible title="Custom fonts">
-          <ThemedText>
-            Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-            <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-              custom fonts such as this one.
-            </ThemedText>
-          </ThemedText>
-          <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-            <ThemedText type="link">Learn more</ThemedText>
-          </ExternalLink>
-        </Collapsible>
-        <Collapsible title="Light and dark mode components">
-          <ThemedText>
-            This template has light and dark mode support. The{' '}
-            <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-            what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-          </ThemedText>
-          <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-            <ThemedText type="link">Learn more</ThemedText>
-          </ExternalLink>
-        </Collapsible>
-        <Collapsible title="Animations">
-          <ThemedText>
-            This template includes an example of an animated component. The{' '}
-            <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-            the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-            library to create a waving hand animation.
-          </ThemedText>
-          {Platform.select({
-            ios: (
-              <ThemedText>
-                The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-                component provides a parallax effect for the header image.
-              </ThemedText>
-            ),
-          })}
-        </Collapsible>
-      </ParallaxScrollView>
+          
+          <HabitatFilter
+            selectedHabitats={selectedHabitats}
+            onHabitatToggle={handleHabitatToggle}
+          />
+          
+          <SizeFilter
+            selectedSizes={selectedSizes}
+            onSizeToggle={handleSizeToggle}
+          />
+
+          {/* Search section moved to bottom of scroll content */}
+          <View style={styles.searchSection}>
+            {hasActiveFilters && (
+              <View style={styles.filtersSummary}>
+                <Text style={styles.filtersText}>
+                  Выбрано фильтров: {[...selectedColors, ...selectedHabitats, ...selectedSizes].length}
+                </Text>
+                <Pressable onPress={handleClearFilters} style={styles.clearButton}>
+                  <Text style={styles.clearButtonText}>Сбросить</Text>
+                </Pressable>
+              </View>
+            )}
+            
+            <Pressable 
+              style={[
+                styles.searchButton, 
+                !hasActiveFilters && styles.searchButtonDisabled
+              ]}
+              onPress={handleSearch}
+              disabled={!hasActiveFilters}
+            >
+              <IconSymbol 
+                name="magnifyingglass" 
+                size={24} 
+                color={hasActiveFilters ? '#FFFFFF' : Colors.light.textMuted} 
+              />
+              <Text style={[
+                styles.searchButtonText,
+                !hasActiveFilters && styles.searchButtonTextDisabled
+              ]}>
+                {hasActiveFilters ? 'Найти птиц' : 'Выберите фильтры для поиска'}
+              </Text>
+            </Pressable>
+            
+            <Text style={styles.searchHint}>
+              Выберите характеристики птицы, которую хотите найти
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -101,15 +152,96 @@ export default function TabTwoScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: Colors.light.background,
   },
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
+  header: {
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingVertical: DesignTokens.spacing.md,
+    backgroundColor: Colors.light.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginBottom: DesignTokens.spacing.xs,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: Colors.light.textSecondary,
+    lineHeight: 22,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: DesignTokens.spacing.lg,
+  },
+  searchSection: {
+    marginTop: DesignTokens.spacing.xl,
+    paddingTop: DesignTokens.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.border,
+  },
+  filtersSummary: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.light.surface,
+    padding: DesignTokens.spacing.md,
+    borderRadius: DesignTokens.borderRadius.card,
+    marginBottom: DesignTokens.spacing.lg,
+    width: '100%',
+    ...DesignTokens.shadows.subtle,
+  },
+  filtersText: {
+    fontSize: 14,
+    color: Colors.light.text,
+    fontWeight: '500',
+  },
+  clearButton: {
+    paddingHorizontal: DesignTokens.spacing.md,
+    paddingVertical: DesignTokens.spacing.sm,
+    backgroundColor: Colors.light.error,
+    borderRadius: DesignTokens.borderRadius.button,
+  },
+  clearButtonText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  searchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: DesignTokens.spacing.xl,
+    paddingVertical: DesignTokens.spacing.lg,
+    borderRadius: DesignTokens.borderRadius.card,
+    marginBottom: DesignTokens.spacing.lg,
+    width: '100%',
+    ...DesignTokens.shadows.card,
+  },
+  searchButtonDisabled: {
+    backgroundColor: Colors.light.surfaceAlt,
+  },
+  searchButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginLeft: DesignTokens.spacing.sm,
+  },
+  searchButtonTextDisabled: {
+    color: Colors.light.textMuted,
+  },
+  searchHint: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

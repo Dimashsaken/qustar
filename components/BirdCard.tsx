@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Colors, DesignTokens } from '../constants/Colors';
 import type { BirdListItem } from '../types/bird';
 import { BirdImage } from './BirdImage';
 
@@ -12,10 +13,11 @@ interface BirdCardProps {
 
 // Get screen dimensions for grid calculations
 const { width: screenWidth } = Dimensions.get('window');
-const gridItemWidth = (screenWidth - 24) / 2 - 4; // Reduced margins for bigger cards
+const gridItemWidth = (screenWidth - 24) / 2 - 4;
 
 /**
  * Bird card component for list or grid view display
+ * Implements mobile-first design with 12px border radius and sky-blue accents
  * Shows essential bird information with navigation to detail screen
  * @param bird - Bird data to display
  * @param variant - Display variant: 'list' or 'grid'
@@ -23,6 +25,24 @@ const gridItemWidth = (screenWidth - 24) / 2 - 4; // Reduced margins for bigger 
  * @returns JSX.Element - Pressable bird card component
  */
 export const BirdCard: React.FC<BirdCardProps> = ({ bird, variant = 'list', onPress }) => {
+  const animatedValue = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(animatedValue, {
+      toValue: 0.98,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.timing(animatedValue, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
   const handlePress = () => {
     if (onPress) {
       onPress();
@@ -41,76 +61,79 @@ export const BirdCard: React.FC<BirdCardProps> = ({ bird, variant = 'list', onPr
   const isGrid = variant === 'grid';
   const containerStyle = isGrid ? [styles.container, styles.gridContainer] : styles.container;
   const contentStyle = isGrid ? styles.gridContent : styles.listContent;
-  const imageSize = isGrid ? 120 : 64; // Much larger image for grid
+  const imageSize = isGrid ? 120 : 64;
 
   return (
-    <Pressable style={containerStyle} onPress={handlePress}>
-      <View style={contentStyle}>
-        <View style={isGrid ? styles.gridImageContainer : styles.imageContainer}>
-          <BirdImage 
-            birdId={bird.id} 
-            scientificName={bird.scientific_name}
-            size={imageSize} 
-          />
-        </View>
-        
-        <View style={isGrid ? styles.gridTextContainer : styles.textContainer}>
-          <Text style={styles.primaryName} numberOfLines={isGrid ? 2 : 1}>
-            {displayName}
-          </Text>
+    <Animated.View style={{ transform: [{ scale: animatedValue }] }}>
+      <Pressable 
+        style={containerStyle} 
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <View style={contentStyle}>
+          <View style={isGrid ? styles.gridImageContainer : styles.imageContainer}>
+            <BirdImage 
+              birdId={bird.id} 
+              scientificName={bird.scientific_name}
+              size={imageSize} 
+            />
+          </View>
           
-          {kazakhName && (
-            <Text style={styles.kazakhName} numberOfLines={1}>
-              {kazakhName}
+          <View style={isGrid ? styles.gridTextContainer : styles.textContainer}>
+            <Text style={styles.primaryName} numberOfLines={isGrid ? 2 : 1}>
+              {displayName}
             </Text>
-          )}
-          
-          {!isGrid && (
-            <View style={styles.metadataRow}>
-              {family && (
-                <Text style={styles.metadata} numberOfLines={1}>
-                  {family}
-                </Text>
-              )}
-              {size && (
-                <Text style={[styles.metadata, styles.size]} numberOfLines={1}>
-                  {size}
-                </Text>
-              )}
-            </View>
-          )}
-          
-          {(colors || status) && (
-            <View style={styles.tagsRow}>
-              {colors && (
-                <Text style={styles.tag} numberOfLines={1}>
-                  {colors}
-                </Text>
-              )}
-              {status && (
-                <Text style={[styles.tag, styles.statusTag]} numberOfLines={1}>
-                  {status}
-                </Text>
-              )}
-            </View>
-          )}
+            
+            {kazakhName && (
+              <Text style={styles.kazakhName} numberOfLines={1}>
+                {kazakhName}
+              </Text>
+            )}
+            
+            {!isGrid && (
+              <View style={styles.metadataRow}>
+                {family && (
+                  <Text style={styles.metadata} numberOfLines={1}>
+                    {family}
+                  </Text>
+                )}
+                {size && (
+                  <Text style={[styles.metadata, styles.size]} numberOfLines={1}>
+                    {size}
+                  </Text>
+                )}
+              </View>
+            )}
+            
+            {(colors || status) && (
+              <View style={styles.tagsRow}>
+                {colors && (
+                  <Text style={styles.tag} numberOfLines={1}>
+                    {colors}
+                  </Text>
+                )}
+                {status && (
+                  <Text style={[styles.tag, styles.statusTag]} numberOfLines={1}>
+                    {status}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: Colors.light.surface,
+    marginHorizontal: DesignTokens.spacing.lg,
+    marginVertical: DesignTokens.spacing.xs,
+    borderRadius: DesignTokens.borderRadius.card, // 12px corner radius
+    ...DesignTokens.shadows.card, // 2px × 4px × 8px shadow
   },
   gridContainer: {
     width: gridItemWidth,
@@ -119,17 +142,16 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexDirection: 'row',
-    padding: 12,
+    padding: DesignTokens.spacing.md,
     alignItems: 'center',
   },
   gridContent: {
     flexDirection: 'column',
-    padding: 16,
+    padding: DesignTokens.spacing.lg,
     alignItems: 'center',
-    minHeight: 240, // Taller to accommodate larger image
   },
   imageContainer: {
-    marginRight: 12,
+    marginRight: DesignTokens.spacing.md,
   },
   gridImageContainer: {
     marginRight: 0,
@@ -139,22 +161,24 @@ const styles = StyleSheet.create({
   },
   gridTextContainer: {
     width: '100%',
-    marginTop: 8,
+    marginTop: DesignTokens.spacing.sm,
     alignItems: 'center',
   },
   primaryName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.light.text,
     marginBottom: 2,
     textAlign: 'center',
+    fontFamily: 'SF Pro Display',
   },
   kazakhName: {
     fontSize: 14,
-    color: '#666',
+    color: Colors.light.textSecondary,
     fontStyle: 'italic',
     marginBottom: 4,
     textAlign: 'center',
+    fontFamily: 'SF Pro Display',
   },
   metadataRow: {
     flexDirection: 'row',
@@ -162,8 +186,9 @@ const styles = StyleSheet.create({
   },
   metadata: {
     fontSize: 12,
-    color: '#999',
+    color: Colors.light.textMuted,
     marginRight: 8,
+    fontFamily: 'SF Pro Display',
   },
   size: {
     fontWeight: '500',
@@ -175,16 +200,18 @@ const styles = StyleSheet.create({
   },
   tag: {
     fontSize: 10,
-    backgroundColor: '#e8f4fd',
-    color: '#0066cc',
+    backgroundColor: Colors.light.primaryAlt + '20', // Sky blue with 20% opacity
+    color: Colors.light.primary,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: DesignTokens.borderRadius.button,
     marginRight: 4,
     marginTop: 2,
+    fontFamily: 'SF Pro Display',
+    fontWeight: '500',
   },
   statusTag: {
-    backgroundColor: '#fff3cd',
-    color: '#856404',
+    backgroundColor: Colors.light.accent + '20', // Soft sun with 20% opacity
+    color: Colors.light.accentAlt,
   },
 }); 

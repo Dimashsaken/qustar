@@ -1,7 +1,10 @@
 import { FlashList } from '@shopify/flash-list';
 import React, { useEffect, useMemo } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
 import { BirdCard } from '../../components/BirdCard';
+import { ThemedText } from '../../components/ThemedText';
+import { ThemedView } from '../../components/ThemedView';
+import { Colors, DesignTokens } from '../../constants/Colors';
 import { useBirds } from '../../hooks/useBirds';
 import { useImageCache } from '../../hooks/useImageCache';
 import { getPrimaryBirdImageUrl } from '../../lib/imageUtils';
@@ -9,6 +12,7 @@ import type { BirdListItem } from '../../types/bird';
 
 /**
  * AllBirds screen - main landing page showing all Kazakhstan birds
+ * Implements mobile-first design with 75% neutrals and sky-blue accents
  * Uses FlashList for optimal performance with large datasets in a 2-column grid
  * Features optimized image caching and preloading for smooth scrolling
  * @returns JSX.Element - AllBirds screen component
@@ -23,13 +27,12 @@ export default function AllBirdsScreen() {
     
     return birds.slice(0, 50).map(bird => 
       getPrimaryBirdImageUrl(bird.id, bird.scientific_name)
-    ).filter(url => url.length > 0); // Filter out empty URLs
+    ).filter(url => url.length > 0);
   }, [birds]);
 
   // Preload images when bird data is available
   useEffect(() => {
     if (imageUrls.length > 0) {
-      // Preload first batch of images for smoother initial scrolling
       preloadImages(imageUrls);
     }
   }, [imageUrls, preloadImages]);
@@ -57,8 +60,10 @@ export default function AllBirdsScreen() {
   const renderLoading = () => (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0066cc" />
-        <Text style={styles.loadingText}>Loading Kazakhstan birds...</Text>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <ThemedText type="default" style={styles.loadingText}>
+          Loading Kazakhstan birds...
+        </ThemedText>
       </View>
     </SafeAreaView>
   );
@@ -70,10 +75,12 @@ export default function AllBirdsScreen() {
   const renderError = () => (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Failed to load birds</Text>
-        <Text style={styles.errorSubtext}>
+        <ThemedText type="title" style={styles.errorText}>
+          Failed to load birds
+        </ThemedText>
+        <ThemedText type="default" style={styles.errorSubtext}>
           {error?.message || 'Please check your connection and try again'}
-        </Text>
+        </ThemedText>
       </View>
     </SafeAreaView>
   );
@@ -85,10 +92,12 @@ export default function AllBirdsScreen() {
   const renderEmpty = () => (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>No birds found</Text>
-        <Text style={styles.emptySubtext}>
+        <ThemedText type="title" style={styles.emptyText}>
+          No birds found
+        </ThemedText>
+        <ThemedText type="default" style={styles.emptySubtext}>
           The bird database appears to be empty. Please check your connection and try again.
-        </Text>
+        </ThemedText>
       </View>
     </SafeAreaView>
   );
@@ -107,10 +116,16 @@ export default function AllBirdsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ThemedView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Kazakhstan Birds</Text>
-          <Text style={styles.subtitle}>{birds.length} species</Text>
+          <View style={styles.headerContent}>
+            <ThemedText type="heading" style={styles.title}>
+              Qustar
+            </ThemedText>
+            <ThemedText type="caption" style={styles.tagline}>
+              Kazakhstan Bird Identifier
+            </ThemedText>
+          </View>
         </View>
         
         <FlashList
@@ -122,12 +137,11 @@ export default function AllBirdsScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.gridContent}
           ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-          // Performance optimizations
           removeClippedSubviews={true}
           onEndReachedThreshold={0.5}
           getItemType={() => 'bird-card'}
         />
-      </View>
+      </ThemedView>
     </SafeAreaView>
   );
 }
@@ -135,74 +149,71 @@ export default function AllBirdsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: Colors.light.surfaceAlt, // Mist grey background
   },
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: Colors.light.surfaceAlt,
   },
   header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    backgroundColor: Colors.light.surface, // Pure white header
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingTop: DesignTokens.spacing.lg,
+    paddingBottom: DesignTokens.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: Colors.light.border,
+    ...DesignTokens.shadows.subtle,
+  },
+  headerContent: {
+    alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#212529',
-    marginBottom: 4,
+    color: Colors.light.primary, // Cerulean for primary accent
+    marginBottom: DesignTokens.spacing.xs,
+    letterSpacing: 0.5,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6c757d',
+  tagline: {
+    color: Colors.light.textSecondary,
+    fontWeight: '500',
+    opacity: 0.8,
   },
   gridContent: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    paddingVertical: DesignTokens.spacing.xs,
+    paddingHorizontal: DesignTokens.spacing.xs,
   },
   itemSeparator: {
-    height: 4,
+    height: DesignTokens.spacing.xs,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: DesignTokens.spacing.xxl * 1.5,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6c757d',
+    marginTop: DesignTokens.spacing.lg,
     textAlign: 'center',
+    color: Colors.light.textSecondary,
   },
   errorText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#dc3545',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: DesignTokens.spacing.sm,
+    color: Colors.light.error,
   },
   errorSubtext: {
-    fontSize: 14,
-    color: '#6c757d',
     textAlign: 'center',
     lineHeight: 20,
+    color: Colors.light.textMuted,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#6c757d',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: DesignTokens.spacing.sm,
+    color: Colors.light.textMuted,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#adb5bd',
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 24,
+    marginBottom: DesignTokens.spacing.xxl,
+    color: Colors.light.textMuted,
   },
 });
