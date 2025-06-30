@@ -1,4 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
 import { BirdCard } from '../../components/BirdCard';
@@ -58,14 +59,17 @@ export default function AllBirdsScreen() {
    * @returns JSX.Element - Loading indicator
    */
   const renderLoading = () => (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.light.primary} />
-        <ThemedText type="default" style={styles.loadingText}>
-          Loading Kazakhstan birds...
-        </ThemedText>
-      </View>
-    </SafeAreaView>
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Colors.light.primary} />
+          <ThemedText type="default" style={styles.loadingText}>
+            Loading Kazakhstan birds...
+          </ThemedText>
+        </View>
+      </SafeAreaView>
+    </>
   );
 
   /**
@@ -73,16 +77,19 @@ export default function AllBirdsScreen() {
    * @returns JSX.Element - Error message
    */
   const renderError = () => (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
-        <ThemedText type="title" style={styles.errorText}>
-          Failed to load birds
-        </ThemedText>
-        <ThemedText type="default" style={styles.errorSubtext}>
-          {error?.message || 'Please check your connection and try again'}
-        </ThemedText>
-      </View>
-    </SafeAreaView>
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <ThemedText type="title" style={styles.errorText}>
+            Failed to load birds
+          </ThemedText>
+          <ThemedText type="default" style={styles.errorSubtext}>
+            {error?.message || 'Please check your connection and try again'}
+          </ThemedText>
+        </View>
+      </SafeAreaView>
+    </>
   );
 
   /**
@@ -90,16 +97,19 @@ export default function AllBirdsScreen() {
    * @returns JSX.Element - Empty state message
    */
   const renderEmpty = () => (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
-        <ThemedText type="title" style={styles.emptyText}>
-          No birds found
-        </ThemedText>
-        <ThemedText type="default" style={styles.emptySubtext}>
-          The bird database appears to be empty. Please check your connection and try again.
-        </ThemedText>
-      </View>
-    </SafeAreaView>
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <ThemedText type="title" style={styles.emptyText}>
+            No birds found
+          </ThemedText>
+          <ThemedText type="default" style={styles.emptySubtext}>
+            The bird database appears to be empty. Please check your connection and try again.
+          </ThemedText>
+        </View>
+      </SafeAreaView>
+    </>
   );
 
   if (isLoading) {
@@ -115,34 +125,37 @@ export default function AllBirdsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ThemedView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <ThemedText type="heading" style={styles.title}>
-              Qustar
-            </ThemedText>
-            <ThemedText type="caption" style={styles.tagline}>
-              Kazakhstan Bird Identifier
-            </ThemedText>
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <ThemedView style={styles.container}>
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <ThemedText type="heading" style={styles.title}>
+                Qustar
+              </ThemedText>
+              <ThemedText type="caption" style={styles.tagline}>
+                Kazakhstan Bird Identifier
+              </ThemedText>
+            </View>
           </View>
-        </View>
-        
-        <FlashList
-          data={birds}
-          renderItem={renderBird}
-          numColumns={2}
-          estimatedItemSize={200}
-          keyExtractor={keyExtractor}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.gridContent}
-          ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-          removeClippedSubviews={true}
-          onEndReachedThreshold={0.5}
-          getItemType={() => 'bird-card'}
-        />
-      </ThemedView>
-    </SafeAreaView>
+          
+          <FlashList
+            data={birds}
+            renderItem={renderBird}
+            numColumns={2}
+            estimatedItemSize={200}
+            keyExtractor={keyExtractor}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.gridContent}
+            ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+            removeClippedSubviews={true}
+            onEndReachedThreshold={0.5}
+            getItemType={() => 'bird-card'}
+          />
+        </ThemedView>
+      </SafeAreaView>
+    </>
   );
 }
 

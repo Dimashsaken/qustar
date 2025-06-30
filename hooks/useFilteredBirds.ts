@@ -33,17 +33,15 @@ const matchesColors = (birdColors: string | null, filterColors: string[]): boole
 /**
  * Фильтрация по местообитаниям в строке с запятыми
  */
-const matchesHabitats = (birdHabitat: string | null, filterHabitats: string[]): boolean => {
-  if (!birdHabitat || filterHabitats.length === 0) return true;
+const matchesHabitat = (birdHabitat: string | null, filterHabitat: string): boolean => {
+  if (!birdHabitat || !filterHabitat) return true;
   
   const birdHabitatList = birdHabitat
     .split(',')
     .map(h => h.trim().toLowerCase())
     .filter(h => h.length > 0);
     
-  return filterHabitats.some(filterHabitat => 
-    birdHabitatList.includes(filterHabitat.toLowerCase())
-  );
+  return birdHabitatList.includes(filterHabitat.toLowerCase());
 };
 
 /**
@@ -101,24 +99,21 @@ const fetchFilteredBirds = async (filters?: BirdSearchFilters): Promise<BirdList
     );
   }
 
-  // Фильтрация по местообитаниям
-  if (filters?.habitat && filters.habitat.length > 0) {
+  // Фильтрация по местообитанию (изменено на одиночное значение)
+  if (filters?.habitat) {
     filteredData = filteredData.filter(bird => 
-      matchesHabitats(bird.habitat, filters.habitat!)
+      matchesHabitat(bird.habitat, filters.habitat!)
     );
   }
 
-  // Фильтрация по размерам
-  if (filters?.sizeCategory && filters.sizeCategory.length > 0) {
+  // Фильтрация по размеру (изменено на одиночное значение)
+  if (filters?.sizeCategory) {
     filteredData = filteredData.filter(bird => {
       if (!bird.length_cm_min || !bird.length_cm_max) return false;
       
       const avgLength = (bird.length_cm_min + bird.length_cm_max) / 2;
-      
-      return filters.sizeCategory!.some(category => {
-        const range = SIZE_RANGES[category];
-        return avgLength >= range.min && avgLength <= range.max;
-      });
+      const range = SIZE_RANGES[filters.sizeCategory!];
+      return avgLength >= range.min && avgLength <= range.max;
     });
   }
 

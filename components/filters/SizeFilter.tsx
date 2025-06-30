@@ -5,7 +5,7 @@ import { SIZE_OPTIONS } from '../../constants/FilterOptions';
 import type { SizeCategory } from '../../types/filters';
 
 interface SizeFilterProps {
-  selectedSizes: SizeCategory[];
+  selectedSize: SizeCategory | null;
   onSizeToggle: (sizeId: string) => void;
 }
 
@@ -19,11 +19,11 @@ const SIZE_SILHOUETTES = {
 
 /**
  * Компонент фильтра по размерам с силуэтами птиц
- * @param selectedSizes - Массив выбранных размерных категорий
+ * @param selectedSize - Выбранная размерная категория (только одна)
  * @param onSizeToggle - Обработчик переключения размера
  */
 export const SizeFilter: React.FC<SizeFilterProps> = ({
-  selectedSizes,
+  selectedSize,
   onSizeToggle,
 }) => {
   return (
@@ -35,7 +35,7 @@ export const SizeFilter: React.FC<SizeFilterProps> = ({
       
       <View style={styles.sizeGrid}>
         {SIZE_OPTIONS.map((size) => {
-          const isSelected = selectedSizes.includes(size.id);
+          const isSelected = selectedSize === size.id;
           return (
             <TouchableOpacity
               key={size.id}
@@ -70,14 +70,6 @@ export const SizeFilter: React.FC<SizeFilterProps> = ({
           );
         })}
       </View>
-      
-      {selectedSizes.length > 0 && (
-        <View style={styles.selectedInfo}>
-          <Text style={styles.selectedText}>
-            Выбранные размеры: {selectedSizes.length}
-          </Text>
-        </View>
-      )}
     </View>
   );
 };
@@ -148,16 +140,5 @@ const styles = StyleSheet.create({
   },
   selectedRange: {
     color: Colors.light.primary,
-  },
-  selectedInfo: {
-    marginTop: DesignTokens.spacing.sm,
-    paddingTop: DesignTokens.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  selectedText: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
   },
 }); 

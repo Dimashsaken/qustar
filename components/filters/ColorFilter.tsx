@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Colors, DesignTokens } from '../../constants/Colors';
 import { COLOR_OPTIONS } from '../../constants/FilterOptions';
 import { FilterButton } from './FilterButton';
@@ -10,7 +10,7 @@ interface ColorFilterProps {
 }
 
 /**
- * Компонент фильтра по цветам с цветными кругами
+ * Компонент фильтра по цветам с цветными кругами в горизонтальной прокрутке
  * @param selectedColors - Массив выбранных цветов
  * @param onColorToggle - Обработчик переключения цвета
  */
@@ -21,7 +21,12 @@ export const ColorFilter: React.FC<ColorFilterProps> = ({
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Цвет оперения</Text>
-      <View style={styles.colorGrid}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+      >
         {COLOR_OPTIONS.map((color) => (
           <FilterButton
             key={color.id}
@@ -33,14 +38,7 @@ export const ColorFilter: React.FC<ColorFilterProps> = ({
             variant="color"
           />
         ))}
-      </View>
-      {selectedColors.length > 0 && (
-        <View style={styles.selectedInfo}>
-          <Text style={styles.selectedText}>
-            Выбрано: {selectedColors.length} {selectedColors.length === 1 ? 'цвет' : 'цвета'}
-          </Text>
-        </View>
-      )}
+      </ScrollView>
     </View>
   );
 };
@@ -59,20 +57,10 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: DesignTokens.spacing.md,
   },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  scrollView: {
+    marginHorizontal: -DesignTokens.spacing.xs,
   },
-  selectedInfo: {
-    marginTop: DesignTokens.spacing.sm,
-    paddingTop: DesignTokens.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  selectedText: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
+  scrollContent: {
+    paddingHorizontal: DesignTokens.spacing.xs,
   },
 }); 

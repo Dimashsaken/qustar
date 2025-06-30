@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import { Colors, DesignTokens } from '../../constants/Colors';
 import { IconSymbol } from '../ui/IconSymbol';
 
@@ -8,9 +8,10 @@ interface FilterButtonProps {
   label: string;
   icon?: string;
   color?: string;
+  image?: any;
   isSelected: boolean;
   onPress: (id: string) => void;
-  variant?: 'default' | 'color' | 'size';
+  variant?: 'default' | 'color' | 'size' | 'habitat';
   disabled?: boolean;
 }
 
@@ -20,6 +21,7 @@ interface FilterButtonProps {
  * @param label - Текст кнопки  
  * @param icon - Имя иконки (опционально)
  * @param color - Цвет для цветовых фильтров (опционально)
+ * @param image - Изображение для местообитаний (опционально)
  * @param isSelected - Состояние выбора
  * @param onPress - Обработчик нажатия
  * @param variant - Вариант отображения
@@ -30,6 +32,7 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
   label,
   icon,
   color,
+  image,
   isSelected,
   onPress,
   variant = 'default',
@@ -58,6 +61,13 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
         isSelected && styles.sizeButtonSelected,
         disabled && styles.buttonDisabled,
       ].filter(Boolean);
+    } else if (variant === 'habitat') {
+      return [
+        styles.button,
+        styles.habitatButton,
+        isSelected && styles.habitatButtonSelected,
+        disabled && styles.buttonDisabled,
+      ].filter(Boolean);
     } else {
       return [
         styles.button,
@@ -70,14 +80,22 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
   const getTextStyle = () => {
     return [
       styles.buttonText,
-      isSelected && variant !== 'color' && styles.buttonTextSelected,
+      isSelected && variant !== 'color' && variant !== 'habitat' && styles.buttonTextSelected,
       disabled && styles.buttonTextDisabled,
     ].filter(Boolean);
   };
 
   return (
     <Pressable style={getButtonStyle()} onPress={handlePress}>
-      {icon && variant !== 'color' && (
+      {variant === 'habitat' && image && (
+        <Image 
+          source={image} 
+          style={styles.habitatImage}
+          resizeMode="cover"
+        />
+      )}
+      
+      {icon && variant !== 'color' && variant !== 'habitat' && (
         <IconSymbol 
           name="circle.fill" 
           size={18} 
@@ -85,7 +103,7 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
         />
       )}
       
-      {variant !== 'color' && (
+      {variant !== 'color' && variant !== 'habitat' && (
         <Text style={getTextStyle()} numberOfLines={variant === 'size' ? 2 : 1}>
           {label}
         </Text>
@@ -100,6 +118,15 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
             styles.checkmark,
             (color === '#FFFFFF' || color === '#FFD54F' || color === '#FFCA28') && styles.checkmarkDark
           ]}
+        />
+      )}
+      
+      {isSelected && variant === 'habitat' && (
+        <IconSymbol 
+          name="checkmark" 
+          size={20} 
+          color="#FFFFFF" 
+          style={styles.habitatCheckmark}
         />
       )}
     </Pressable>
@@ -179,5 +206,33 @@ const styles = StyleSheet.create({
   },
   checkmarkDark: {
     backgroundColor: Colors.light.text,
+  },
+  habitatButton: {
+    width: 80,
+    height: 80,
+    borderRadius: DesignTokens.borderRadius.button,
+    padding: 0,
+    marginRight: DesignTokens.spacing.md,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  habitatButtonSelected: {
+    borderWidth: 3,
+    borderColor: Colors.light.primary,
+  },
+  habitatImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: DesignTokens.borderRadius.button,
+  },
+  habitatCheckmark: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: Colors.light.primary,
+    borderRadius: 12,
+    padding: 4,
   },
 }); 

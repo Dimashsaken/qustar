@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FilteredBirdsList } from '../components/filters/FilteredBirdsList';
@@ -6,7 +7,7 @@ import { IconSymbol } from '../components/ui/IconSymbol';
 import { Colors, DesignTokens } from '../constants/Colors';
 import { COLOR_OPTIONS, HABITAT_OPTIONS, SIZE_OPTIONS } from '../constants/FilterOptions';
 import { useFilteredBirds } from '../hooks/useFilteredBirds';
-import type { BirdSearchFilters } from '../types/filters';
+import type { BirdSearchFilters, SizeCategory } from '../types/filters';
 
 /**
  * Экран результатов поиска с отображением примененных фильтров
@@ -17,8 +18,8 @@ export default function ResultsScreen() {
   // Парсинг параметров фильтров из URL
   const filters: BirdSearchFilters = {
     colors: params.colors ? JSON.parse(params.colors as string) : undefined,
-    habitat: params.habitat ? JSON.parse(params.habitat as string) : undefined,
-    sizeCategory: params.sizeCategory ? JSON.parse(params.sizeCategory as string) : undefined,
+    habitat: params.habitat as string || undefined,
+    sizeCategory: params.sizeCategory as SizeCategory || undefined,
   };
 
   const { data: birds = [], isLoading, error } = useFilteredBirds(filters);
@@ -60,23 +61,19 @@ export default function ResultsScreen() {
       });
     }
 
-    if (filters.habitat?.length) {
-      filters.habitat.forEach(habitat => {
-        appliedFilters.push({
-          type: 'habitat',
-          value: habitat,
-          display: getFilterDisplayName('habitat', habitat),
-        });
+    if (filters.habitat) {
+      appliedFilters.push({
+        type: 'habitat',
+        value: filters.habitat,
+        display: getFilterDisplayName('habitat', filters.habitat),
       });
     }
 
-    if (filters.sizeCategory?.length) {
-      filters.sizeCategory.forEach(size => {
-        appliedFilters.push({
-          type: 'size',
-          value: size,
-          display: getFilterDisplayName('size', size),
-        });
+    if (filters.sizeCategory) {
+      appliedFilters.push({
+        type: 'size',
+        value: filters.sizeCategory,
+        display: getFilterDisplayName('size', filters.sizeCategory),
       });
     }
 
@@ -101,38 +98,41 @@ export default function ResultsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Top Bar */}
-        <View style={styles.topBar}>
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <IconSymbol name="chevron.left" size={24} color={Colors.light.text} />
-          </Pressable>
-          <View style={styles.topBarContent}>
-            <Text style={styles.topBarTitle}>Результаты поиска</Text>
-            <Text style={styles.topBarSubtitle}>
-              Найдено: {birds.length} {birds.length === 1 ? 'птица' : birds.length < 5 ? 'птицы' : 'птиц'}
-            </Text>
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          {/* Top Bar */}
+          <View style={styles.topBar}>
+            <Pressable style={styles.backButton} onPress={handleBack}>
+              <IconSymbol name="chevron.left" size={24} color={Colors.light.text} />
+            </Pressable>
+            <View style={styles.topBarContent}>
+              <Text style={styles.topBarTitle}>Результаты поиска</Text>
+              <Text style={styles.topBarSubtitle}>
+                Найдено: {birds.length} {birds.length === 1 ? 'птица' : birds.length < 5 ? 'птицы' : 'птиц'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Applied Filters */}
+          <View style={styles.filtersSection}>
+            <Text style={styles.filtersTitle}>Применённые фильтры:</Text>
+            {renderAppliedFilters()}
+          </View>
+
+          {/* Results */}
+          <View style={styles.resultsSection}>
+            <FilteredBirdsList
+              birds={birds}
+              isLoading={isLoading}
+              error={error}
+              hasActiveFilters={true}
+            />
           </View>
         </View>
-
-        {/* Applied Filters */}
-        <View style={styles.filtersSection}>
-          <Text style={styles.filtersTitle}>Применённые фильтры:</Text>
-          {renderAppliedFilters()}
-        </View>
-
-        {/* Results */}
-        <View style={styles.resultsSection}>
-          <FilteredBirdsList
-            birds={birds}
-            isLoading={isLoading}
-            error={error}
-            hasActiveFilters={true}
-          />
-        </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 }
 

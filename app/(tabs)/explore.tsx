@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ColorFilter } from '../../components/filters/ColorFilter';
@@ -15,8 +16,8 @@ import type { SizeCategory } from '../../types/filters';
 export default function ExploreScreen() {
   // Состояние фильтров
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [selectedHabitats, setSelectedHabitats] = useState<string[]>([]);
-  const [selectedSizes, setSelectedSizes] = useState<SizeCategory[]>([]);
+  const [selectedHabitat, setSelectedHabitat] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<SizeCategory | null>(null);
 
   // Обработчики переключения фильтров
   const handleColorToggle = useCallback((colorId: string) => {
@@ -28,33 +29,29 @@ export default function ExploreScreen() {
   }, []);
 
   const handleHabitatToggle = useCallback((habitatId: string) => {
-    setSelectedHabitats(prev => 
-      prev.includes(habitatId) 
-        ? prev.filter(id => id !== habitatId)
-        : [...prev, habitatId]
+    setSelectedHabitat(prev => 
+      prev === habitatId ? null : habitatId
     );
   }, []);
 
   const handleSizeToggle = useCallback((sizeId: string) => {
     const sizeCat = sizeId as SizeCategory;
-    setSelectedSizes(prev => 
-      prev.includes(sizeCat) 
-        ? prev.filter(id => id !== sizeCat)
-        : [...prev, sizeCat]
+    setSelectedSize(prev => 
+      prev === sizeCat ? null : sizeCat
     );
   }, []);
 
   // Сброс всех фильтров
   const handleClearFilters = useCallback(() => {
     setSelectedColors([]);
-    setSelectedHabitats([]);
-    setSelectedSizes([]);
+    setSelectedHabitat(null);
+    setSelectedSize(null);
   }, []);
 
   // Проверка наличия активных фильтров
   const hasActiveFilters = selectedColors.length > 0 || 
-                          selectedHabitats.length > 0 || 
-                          selectedSizes.length > 0;
+                          selectedHabitat !== null ||
+                          selectedSize !== null;
 
   // Навигация к результатам поиска
   const handleSearch = useCallback(() => {
@@ -65,87 +62,86 @@ export default function ExploreScreen() {
     if (selectedColors.length > 0) {
       params.set('colors', JSON.stringify(selectedColors));
     }
-    if (selectedHabitats.length > 0) {
-      params.set('habitat', JSON.stringify(selectedHabitats));
+    if (selectedHabitat) {
+      params.set('habitat', selectedHabitat);
     }
-    if (selectedSizes.length > 0) {
-      params.set('sizeCategory', JSON.stringify(selectedSizes));
+    if (selectedSize) {
+      params.set('sizeCategory', selectedSize);
     }
 
     router.push(`/results?${params.toString()}`);
-  }, [selectedColors, selectedHabitats, selectedSizes, hasActiveFilters]);
+  }, [selectedColors, selectedHabitat, selectedSize, hasActiveFilters]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Поиск птиц</Text>
-          <Text style={styles.subtitle}>
-            Определите птицу по её характеристикам
-          </Text>
-        </View>
-
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <ColorFilter
-            selectedColors={selectedColors}
-            onColorToggle={handleColorToggle}
-          />
-          
-          <HabitatFilter
-            selectedHabitats={selectedHabitats}
-            onHabitatToggle={handleHabitatToggle}
-          />
-          
-          <SizeFilter
-            selectedSizes={selectedSizes}
-            onSizeToggle={handleSizeToggle}
-          />
-
-          {/* Search section moved to bottom of scroll content */}
-          <View style={styles.searchSection}>
-            {hasActiveFilters && (
-              <View style={styles.filtersSummary}>
-                <Text style={styles.filtersText}>
-                  Выбрано фильтров: {[...selectedColors, ...selectedHabitats, ...selectedSizes].length}
-                </Text>
-                <Pressable onPress={handleClearFilters} style={styles.clearButton}>
-                  <Text style={styles.clearButtonText}>Сбросить</Text>
-                </Pressable>
-              </View>
-            )}
-            
-            <Pressable 
-              style={[
-                styles.searchButton, 
-                !hasActiveFilters && styles.searchButtonDisabled
-              ]}
-              onPress={handleSearch}
-              disabled={!hasActiveFilters}
-            >
-              <IconSymbol 
-                name="magnifyingglass" 
-                size={24} 
-                color={hasActiveFilters ? '#FFFFFF' : Colors.light.textMuted} 
-              />
-              <Text style={[
-                styles.searchButtonText,
-                !hasActiveFilters && styles.searchButtonTextDisabled
-              ]}>
-                {hasActiveFilters ? 'Найти птиц' : 'Выберите фильтры для поиска'}
-              </Text>
-            </Pressable>
-            
-            <Text style={styles.searchHint}>
-              Выберите характеристики птицы, которую хотите найти
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Поиск птиц</Text>
+            <Text style={styles.subtitle}>
+              Определите птицу по её характеристикам
             </Text>
           </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <ColorFilter
+              selectedColors={selectedColors}
+              onColorToggle={handleColorToggle}
+            />
+            
+            <HabitatFilter
+              selectedHabitat={selectedHabitat}
+              onHabitatToggle={handleHabitatToggle}
+            />
+            
+            <SizeFilter
+              selectedSize={selectedSize}
+              onSizeToggle={handleSizeToggle}
+            />
+
+            {/* Search section moved to bottom of scroll content */}
+            <View style={styles.searchSection}>
+              {hasActiveFilters && (
+                <View style={styles.filtersSummary}>
+                  <Text style={styles.filtersText}>
+                    Выбрано фильтров: {selectedColors.length + (selectedHabitat ? 1 : 0) + (selectedSize ? 1 : 0)}
+                  </Text>
+                  <Pressable onPress={handleClearFilters} style={styles.clearButton}>
+                    <Text style={styles.clearButtonText}>Сбросить</Text>
+                  </Pressable>
+                </View>
+              )}
+              
+              <Pressable 
+                style={[
+                  styles.searchButton, 
+                  !hasActiveFilters && styles.searchButtonDisabled
+                ]}
+                onPress={handleSearch}
+                disabled={!hasActiveFilters}
+              >
+                <IconSymbol 
+                  name="magnifyingglass" 
+                  size={24} 
+                  color={hasActiveFilters ? '#FFFFFF' : Colors.light.textMuted} 
+                />
+                <Text style={[
+                  styles.searchButtonText,
+                  !hasActiveFilters && styles.searchButtonTextDisabled
+                ]}>
+                  {hasActiveFilters ? 'Найти птиц' : 'Выберите фильтры для поиска'}
+                </Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -237,11 +233,5 @@ const styles = StyleSheet.create({
   },
   searchButtonTextDisabled: {
     color: Colors.light.textMuted,
-  },
-  searchHint: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });

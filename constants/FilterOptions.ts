@@ -1,20 +1,50 @@
 import type {
-    BodyTypeOption,
-    ColorOption,
-    HabitatOption,
-    SizeOption
+  BodyTypeOption,
+  ColorOption,
+  HabitatOption,
+  SizeOption
 } from '../types/filters';
 
 /**
  * Опции фильтра местообитаний на основе данных из базы
  */
 export const HABITAT_OPTIONS: HabitatOption[] = [
-  { id: 'forest', label: 'Лес', icon: 'tree.fill' },
-  { id: 'steppe', label: 'Степь', icon: 'leaf.fill' },
-  { id: 'desert', label: 'Пустыня', icon: 'sun.max.fill' },
-  { id: 'mountain', label: 'Горы', icon: 'mountain.2.fill' },
-  { id: 'wetlands', label: 'Водно-болотные угодья', icon: 'drop.fill' },
-  { id: 'settlement', label: 'Населенные пункты', icon: 'building.2.fill' },
+  { 
+    id: 'forest', 
+    label: 'Лес', 
+    icon: 'tree.fill',
+    image: require('../assets/images/ChatGPT Image Jun 30, 2025, 05_34_18 PM.png')
+  },
+  { 
+    id: 'steppe', 
+    label: 'Степь', 
+    icon: 'leaf.fill',
+    image: require('../assets/images/ChatGPT Image Jun 30, 2025, 05_13_28 PM.png')
+  },
+  { 
+    id: 'desert', 
+    label: 'Пустыня', 
+    icon: 'sun.max.fill',
+    image: require('../assets/images/ChatGPT Image Jun 30, 2025, 04_56_37 PM.png')
+  },
+  { 
+    id: 'mountain', 
+    label: 'Горы', 
+    icon: 'mountain.2.fill',
+    image: require('../assets/images/ChatGPT Image Jun 30, 2025, 05_26_46 PM.png')
+  },
+  { 
+    id: 'wetlands', 
+    label: 'Водно-болотные угодья', 
+    icon: 'drop.fill',
+    image: require('../assets/images/ChatGPT Image Jun 30, 2025, 05_29_57 PM.png')
+  },
+  { 
+    id: 'settlement', 
+    label: 'Населенные пункты', 
+    icon: 'building.2.fill',
+    image: require('../assets/images/ChatGPT Image Jun 30, 2025, 05_06_57 PM.png')
+  },
 ];
 
 /**

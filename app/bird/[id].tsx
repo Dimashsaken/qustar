@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ActivityIndicator, Dimensions, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BirdImage } from '../../components/BirdImage';
@@ -24,14 +25,17 @@ export default function BirdDetailScreen() {
    * @returns JSX.Element - Loading indicator
    */
   const renderLoading = () => (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.light.primary} />
-        <ThemedText type="default" style={styles.loadingText}>
-          Loading bird details...
-        </ThemedText>
-      </View>
-    </SafeAreaView>
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Colors.light.primary} />
+          <ThemedText type="default" style={styles.loadingText}>
+            Loading bird details...
+          </ThemedText>
+        </View>
+      </SafeAreaView>
+    </>
   );
 
   /**
@@ -39,21 +43,24 @@ export default function BirdDetailScreen() {
    * @returns JSX.Element - Error message
    */
   const renderError = () => (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
-        <ThemedText type="title" style={styles.errorText}>
-          Failed to load bird details
-        </ThemedText>
-        <ThemedText type="default" style={styles.errorSubtext}>
-          {error?.message || 'Please check your connection and try again'}
-        </ThemedText>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <ThemedText type="bold" style={styles.backButtonTextWhite}>
-            Back
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <ThemedText type="title" style={styles.errorText}>
+            Failed to load bird details
           </ThemedText>
-        </Pressable>
-      </View>
-    </SafeAreaView>
+          <ThemedText type="default" style={styles.errorSubtext}>
+            {error?.message || 'Please check your connection and try again'}
+          </ThemedText>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <ThemedText type="bold" style={styles.backButtonTextWhite}>
+              Back
+            </ThemedText>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </>
   );
 
   /**
@@ -61,21 +68,24 @@ export default function BirdDetailScreen() {
    * @returns JSX.Element - Not found message
    */
   const renderNotFound = () => (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.centerContainer}>
-        <ThemedText type="title" style={styles.errorText}>
-          Bird not found
-        </ThemedText>
-        <ThemedText type="default" style={styles.errorSubtext}>
-          The requested bird could not be found in our database
-        </ThemedText>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <ThemedText type="bold" style={styles.backButtonTextWhite}>
-            Go Back
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <ThemedText type="title" style={styles.errorText}>
+            Bird not found
           </ThemedText>
-        </Pressable>
-      </View>
-    </SafeAreaView>
+          <ThemedText type="default" style={styles.errorSubtext}>
+            The requested bird could not be found in our database
+          </ThemedText>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <ThemedText type="bold" style={styles.backButtonTextWhite}>
+              Go Back
+            </ThemedText>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </>
   );
 
   if (isLoading) {
@@ -95,246 +105,249 @@ export default function BirdDetailScreen() {
   const russianName = bird.common_name_ru;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Hero Image Section - 35% of screen */}
-        <View style={styles.heroContainer}>
-          <BirdImage 
-            birdId={bird.id} 
-            scientificName={bird.scientific_name}
-            size={screenWidth} 
-            style={styles.heroImage} 
-          />
-          
-          {/* Back button with new design system */}
-          <Pressable style={styles.backButtonOverlay} onPress={() => router.back()}>
-            <Text style={styles.backButtonIcon}>←</Text>
-          </Pressable>
-        </View>
-        
-        {/* Content card with elevation and rounded corners */}
-        <View style={styles.contentCard}>
-          {/* Bird name section at top of content */}
-          <View style={styles.titleSection}>
-            <ThemedText type="heading" style={styles.mainTitle}>
-              {displayName}
-            </ThemedText>
-            {bird.scientific_name && (
-              <ThemedText type="default" style={styles.scientificName}>
-                {bird.scientific_name}
-              </ThemedText>
-            )}
+    <>
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+          {/* Hero Image Section - 35% of screen */}
+          <View style={styles.heroContainer}>
+            <BirdImage 
+              birdId={bird.id} 
+              scientificName={bird.scientific_name}
+              size={screenWidth} 
+              style={styles.heroImage} 
+            />
+            
+            {/* Back button with new design system */}
+            <Pressable style={styles.backButtonOverlay} onPress={() => router.back()}>
+              <Text style={styles.backButtonIcon}>←</Text>
+            </Pressable>
           </View>
           
-          {/* Multi-language names */}
-          {(kazakhName || russianName) && (
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Alternative Names
+          {/* Content card with elevation and rounded corners */}
+          <View style={styles.contentCard}>
+            {/* Bird name section at top of content */}
+            <View style={styles.titleSection}>
+              <ThemedText type="heading" style={styles.mainTitle}>
+                {displayName}
               </ThemedText>
-              <View style={styles.sectionDivider} />
-              {kazakhName && (
-                <View style={styles.nameRow}>
-                  <ThemedText type="bold" style={styles.nameLabel}>
-                    Kazakh:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.nameValue}>
-                    {kazakhName}
-                  </ThemedText>
-                </View>
-              )}
-              {russianName && (
-                <View style={styles.nameRow}>
-                  <ThemedText type="bold" style={styles.nameLabel}>
-                    Russian:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.nameValue}>
-                    {russianName}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-          )}
-          
-          {/* Classification */}
-          {(bird.family || bird.order) && (
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Classification
-              </ThemedText>
-              <View style={styles.sectionDivider} />
-              {bird.family && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Family:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.family}
-                  </ThemedText>
-                </View>
-              )}
-              {bird.order && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Order:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.order}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-          )}
-          
-          {/* Physical characteristics */}
-          {(bird.size || bird.length_cm_min || bird.wingspan_cm_min || bird.weight_g_min) && (
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Physical Characteristics
-              </ThemedText>
-              <View style={styles.sectionDivider} />
-              {bird.size && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Size:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.size}
-                  </ThemedText>
-                </View>
-              )}
-              {(bird.length_cm_min || bird.length_cm_max) && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Length:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.length_cm_min}-{bird.length_cm_max} cm
-                  </ThemedText>
-                </View>
-              )}
-              {(bird.wingspan_cm_min || bird.wingspan_cm_max) && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Wingspan:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.wingspan_cm_min}-{bird.wingspan_cm_max} cm
-                  </ThemedText>
-                </View>
-              )}
-              {(bird.weight_g_min || bird.weight_g_max) && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Weight:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.weight_g_min}-{bird.weight_g_max} g
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Status in Kazakhstan */}
-          {bird.status_kz && (
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Status in Kazakhstan
-              </ThemedText>
-              <View style={styles.sectionDivider} />
-              <View style={styles.infoRow}>
-                <ThemedText type="bold" style={styles.infoLabel}>
-                  Status:
+              {bird.scientific_name && (
+                <ThemedText type="default" style={styles.scientificName}>
+                  {bird.scientific_name}
                 </ThemedText>
-                <ThemedText type="default" style={[styles.infoValue, styles.conservationStatus]}>
-                  {bird.status_kz}
+              )}
+            </View>
+            
+            {/* Multi-language names */}
+            {(kazakhName || russianName) && (
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Alternative Names
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                {kazakhName && (
+                  <View style={styles.nameRow}>
+                    <ThemedText type="bold" style={styles.nameLabel}>
+                      Kazakh:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.nameValue}>
+                      {kazakhName}
+                    </ThemedText>
+                  </View>
+                )}
+                {russianName && (
+                  <View style={styles.nameRow}>
+                    <ThemedText type="bold" style={styles.nameLabel}>
+                      Russian:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.nameValue}>
+                      {russianName}
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            )}
+            
+            {/* Classification */}
+            {(bird.family || bird.order) && (
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Classification
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                {bird.family && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Family:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.family}
+                    </ThemedText>
+                  </View>
+                )}
+                {bird.order && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Order:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.order}
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            )}
+            
+            {/* Physical characteristics */}
+            {(bird.size || bird.length_cm_min || bird.wingspan_cm_min || bird.weight_g_min) && (
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Physical Characteristics
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                {bird.size && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Size:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.size}
+                    </ThemedText>
+                  </View>
+                )}
+                {(bird.length_cm_min || bird.length_cm_max) && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Length:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.length_cm_min}-{bird.length_cm_max} cm
+                    </ThemedText>
+                  </View>
+                )}
+                {(bird.wingspan_cm_min || bird.wingspan_cm_max) && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Wingspan:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.wingspan_cm_min}-{bird.wingspan_cm_max} cm
+                    </ThemedText>
+                  </View>
+                )}
+                {(bird.weight_g_min || bird.weight_g_max) && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Weight:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.weight_g_min}-{bird.weight_g_max} g
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Status in Kazakhstan */}
+            {bird.status_kz && (
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Status in Kazakhstan
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                <View style={styles.infoRow}>
+                  <ThemedText type="bold" style={styles.infoLabel}>
+                    Status:
+                  </ThemedText>
+                  <ThemedText type="default" style={[styles.infoValue, styles.conservationStatus]}>
+                    {bird.status_kz}
+                  </ThemedText>
+                </View>
+              </View>
+            )}
+
+            {/* Additional characteristics */}
+            {(bird.primary_colors || bird.body_type || bird.beak_type) && (
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Characteristics
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                {bird.primary_colors && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Colors:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.primary_colors}
+                    </ThemedText>
+                  </View>
+                )}
+                {bird.body_type && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Body Type:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.body_type}
+                    </ThemedText>
+                  </View>
+                )}
+                {bird.beak_type && (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Beak Type:
+                    </ThemedText>
+                    <ThemedText type="default" style={styles.infoValue}>
+                      {bird.beak_type}
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Habitat information */}
+            {bird.habitat && (
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Habitat
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                <ThemedText type="default" style={styles.habitatText}>
+                  {bird.habitat}
                 </ThemedText>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* Additional characteristics */}
-          {(bird.primary_colors || bird.body_type || bird.beak_type) && (
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Characteristics
-              </ThemedText>
-              <View style={styles.sectionDivider} />
-              {bird.primary_colors && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Colors:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.primary_colors}
-                  </ThemedText>
-                </View>
-              )}
-              {bird.body_type && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Body Type:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.body_type}
-                  </ThemedText>
-                </View>
-              )}
-              {bird.beak_type && (
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Beak Type:
-                  </ThemedText>
-                  <ThemedText type="default" style={styles.infoValue}>
-                    {bird.beak_type}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-          )}
+            {/* Additional notes */}
+            {bird.notes && (
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Notes
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                <ThemedText type="default" style={styles.descriptionText}>
+                  {bird.notes}
+                </ThemedText>
+              </View>
+            )}
 
-          {/* Habitat information */}
-          {bird.habitat && (
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Habitat
-              </ThemedText>
-              <View style={styles.sectionDivider} />
-              <ThemedText type="default" style={styles.habitatText}>
-                {bird.habitat}
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Additional notes */}
-          {bird.notes && (
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Notes
-              </ThemedText>
-              <View style={styles.sectionDivider} />
-              <ThemedText type="default" style={styles.descriptionText}>
-                {bird.notes}
-              </ThemedText>
-            </View>
-          )}
-
-          {/* Subspecies in Kazakhstan */}
-          {bird.subspecies_in_kz && (
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Subspecies in Kazakhstan
-              </ThemedText>
-              <View style={styles.sectionDivider} />
-              <ThemedText type="default" style={styles.descriptionText}>
-                {bird.subspecies_in_kz}
-              </ThemedText>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            {/* Subspecies in Kazakhstan */}
+            {bird.subspecies_in_kz && (
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Subspecies in Kazakhstan
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                <ThemedText type="default" style={styles.descriptionText}>
+                  {bird.subspecies_in_kz}
+                </ThemedText>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
 

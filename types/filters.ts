@@ -10,9 +10,9 @@ export interface BirdSearchFilters {
   size?: string;
   status?: string;
   colors?: string[];
-  habitat?: string[];
+  habitat?: string;
   bodyType?: string[];
-  sizeCategory?: SizeCategory[];
+  sizeCategory?: SizeCategory;
 }
 
 /**
@@ -27,6 +27,7 @@ export interface HabitatOption {
   id: string;
   label: string;
   icon: string;
+  image?: any;
 }
 
 /**
@@ -62,10 +63,10 @@ export interface SizeOption {
  * Состояние активных фильтров
  */
 export interface ActiveFilters {
-  habitats: string[];
+  habitats: string;
   colors: string[];
   bodyTypes: string[];
-  sizeCategories: SizeCategory[];
+  sizeCategories: SizeCategory;
 }
 
 /**

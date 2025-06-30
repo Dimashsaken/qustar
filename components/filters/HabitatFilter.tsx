@@ -1,46 +1,44 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Colors, DesignTokens } from '../../constants/Colors';
 import { HABITAT_OPTIONS } from '../../constants/FilterOptions';
 import { FilterButton } from './FilterButton';
 
 interface HabitatFilterProps {
-  selectedHabitats: string[];
+  selectedHabitat: string | null;
   onHabitatToggle: (habitatId: string) => void;
 }
 
 /**
- * Компонент фильтра по местообитаниям с иконками окружающей среды
- * @param selectedHabitats - Массив выбранных местообитаний
+ * Компонент фильтра по местообитаниям с изображениями в горизонтальной прокрутке
+ * @param selectedHabitat - Выбранное местообитание (только одно)
  * @param onHabitatToggle - Обработчик переключения местообитания
  */
 export const HabitatFilter: React.FC<HabitatFilterProps> = ({
-  selectedHabitats,
+  selectedHabitat,
   onHabitatToggle,
 }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Местообитание</Text>
-      <View style={styles.habitatGrid}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+      >
         {HABITAT_OPTIONS.map((habitat) => (
           <FilterButton
             key={habitat.id}
             id={habitat.id}
             label={habitat.label}
-            icon={habitat.icon}
-            isSelected={selectedHabitats.includes(habitat.id)}
+            image={habitat.image}
+            isSelected={selectedHabitat === habitat.id}
             onPress={onHabitatToggle}
-            variant="default"
+            variant="habitat"
           />
         ))}
-      </View>
-      {selectedHabitats.length > 0 && (
-        <View style={styles.selectedInfo}>
-          <Text style={styles.selectedText}>
-            Выбрано: {selectedHabitats.join(', ')}
-          </Text>
-        </View>
-      )}
+      </ScrollView>
     </View>
   );
 };
@@ -59,20 +57,10 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: DesignTokens.spacing.md,
   },
-  habitatGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+  scrollView: {
+    marginHorizontal: -DesignTokens.spacing.xs,
   },
-  selectedInfo: {
-    marginTop: DesignTokens.spacing.sm,
-    paddingTop: DesignTokens.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  selectedText: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
+  scrollContent: {
+    paddingHorizontal: DesignTokens.spacing.xs,
   },
 }); 
