@@ -259,4 +259,93 @@ export const getComprehensiveStats = () => {
     signedUrlCache: urlCache.getStats(),
     performance: performanceMonitor.getStats()
   };
+};
+
+/**
+ * Generates signed URLs for bird migration/habitat maps with caching
+ * @param birdId - Bird ID (should be numeric for map naming)
+ * @param scientificName - Bird's scientific name
+ * @returns Promise<string | null> - Signed URL for map or null if not found
+ */
+export const generateBirdMapUrl = async (birdId: string, scientificName?: string | null): Promise<string | null> => {
+  const startTime = Date.now();
+  
+  try {
+    // Extract numeric ID from birdId (handle both string numbers and other formats)
+    let numericId: string;
+    
+    if (/^\d+$/.test(birdId)) {
+      // If birdId is already numeric, use it directly
+      numericId = birdId;
+    } else {
+      // Try to extract numbers from the ID (e.g., "bird-123" -> "123")
+      const numberMatch = birdId.match(/\d+/);
+      if (numberMatch) {
+        numericId = numberMatch[0];
+      } else {
+        // If no numbers found, try using the first few characters as a fallback
+        console.warn('🗺️ Non-numeric bird ID for map, using fallback:', birdId);
+        return null;
+      }
+    }
+    
+    // Generate map filename prioritizing .jpeg since that's what exists in storage
+    const filesToTry: string[] = [];
+    
+    if (scientificName) {
+      const nameWithDashes = scientificName.trim().replace(/\s+/g, '-');
+      // Try .jpeg first (what actually exists), then .jpg as fallback
+      filesToTry.push(`${numericId}-${nameWithDashes}-map.jpeg`);
+      filesToTry.push(`${numericId}-${nameWithDashes}-map.jpg`);
+    }
+    
+    // Fallback formats without scientific name
+    filesToTry.push(`${numericId}-map.jpeg`);
+    filesToTry.push(`${numericId}-map.jpg`);
+    
+    // Try each filename until we find one that works
+    for (const filename of filesToTry) {
+      const cacheKey = `bird-maps-images/${filename}`;
+      
+      // Check cache first
+      const cachedUrl = urlCache.get(cacheKey);
+      if (cachedUrl) {
+        performanceMonitor.recordCacheHit();
+        return cachedUrl;
+      }
+      
+      performanceMonitor.recordCacheMiss();
+      
+      // Try to generate signed URL for this filename
+      const { data, error } = await supabase.storage
+        .from('qustar-images')
+        .createSignedUrl(`bird-maps-images/${filename}`, 3600);
+      
+      if (data?.signedUrl && !error) {
+        urlCache.set(cacheKey, data.signedUrl);
+        console.log(`🗺️ Found map: ${filename}`);
+        return data.signedUrl;
+      }
+    }
+    
+    console.log(`🗺️ No map found for bird ${numericId} (${scientificName})`);
+    return null;
+    
+  } catch (error) {
+    console.error('🗺️ Error generating map URL:', error);
+    return null;
+  } finally {
+    const loadTime = Date.now() - startTime;
+    performanceMonitor.recordLoadTime(loadTime);
+  }
+};
+
+/**
+ * React Query compatible function for bird map URLs
+ * @param birdId - Bird ID
+ * @param scientificName - Scientific name for URL generation
+ * @returns Promise<string | null> - Map URL or null
+ */
+export const fetchBirdMapUrl = async (birdId: string, scientificName?: string | null): Promise<string | null> => {
+  return generateBirdMapUrl(birdId, scientificName);
 }; 

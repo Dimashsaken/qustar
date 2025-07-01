@@ -1,5 +1,5 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
-import { batchGenerateBirdImageUrls, generateBirdImageUrls } from '../lib/imageUtils';
+import { batchGenerateBirdImageUrls, fetchBirdMapUrl, generateBirdImageUrls } from '../lib/imageUtils';
 import { supabase } from '../lib/supabaseClient';
 import type { Bird, BirdListItem, BirdSearchFilters } from '../types/bird';
 
@@ -133,6 +133,27 @@ export const useBatchBirdImageUrls = (
     enabled: birds.length > 0,
     staleTime: 45 * 60 * 1000,
     gcTime: 55 * 60 * 1000,
+    retry: 2,
+    retryDelay: 1000,
+  });
+};
+
+/**
+ * React Query hook for fetching bird migration/habitat map URL
+ * @param birdId - Bird ID
+ * @param scientificName - Scientific name for URL generation
+ * @returns UseQueryResult with map URL or null
+ */
+export const useBirdMapUrl = (
+  birdId: string, 
+  scientificName?: string | null
+): UseQueryResult<string | null, Error> => {
+  return useQuery({
+    queryKey: ['bird-map-url', birdId, scientificName],
+    queryFn: () => fetchBirdMapUrl(birdId, scientificName),
+    enabled: !!birdId,
+    staleTime: 45 * 60 * 1000, // 45 minutes (5min buffer before signed URL expiry)
+    gcTime: 55 * 60 * 1000, // 55 minutes garbage collection
     retry: 2,
     retryDelay: 1000,
   });

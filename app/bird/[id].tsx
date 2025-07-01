@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ActivityIndicator, Dimensions, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BirdImage } from '../../components/BirdImage';
+import { BirdMap } from '../../components/BirdMap';
 import { ThemedText } from '../../components/ThemedText';
 import { Colors, DesignTokens } from '../../constants/Colors';
 import { useBird } from '../../hooks/useBirds';
@@ -136,6 +137,18 @@ export default function BirdDetailScreen() {
                   {bird.scientific_name}
                 </ThemedText>
               )}
+            </View>
+            
+            {/* Migration & Habitat Map */}
+            <View style={styles.sectionCard}>
+              <ThemedText type="title" style={styles.sectionTitle}>
+                Карта ареала и миграции
+              </ThemedText>
+              <View style={styles.sectionDivider} />
+              <BirdMap 
+                birdId={bird.id}
+                scientificName={bird.scientific_name}
+              />
             </View>
             
             {/* Multi-language names */}
