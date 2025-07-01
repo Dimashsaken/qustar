@@ -1,9 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FilteredBirdsList } from '../components/filters/FilteredBirdsList';
-import { IconSymbol } from '../components/ui/IconSymbol';
 import { Colors, DesignTokens } from '../constants/Colors';
 import { COLOR_OPTIONS, HABITAT_OPTIONS, SIZE_OPTIONS } from '../constants/FilterOptions';
 import { useFilteredBirds } from '../hooks/useFilteredBirds';
@@ -103,8 +103,20 @@ export default function ResultsScreen() {
       <SafeAreaView style={styles.safeArea}>
         {/* Top Bar */}
         <View style={styles.topBar}>
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <IconSymbol name="chevron.left" size={24} color={Colors.light.text} />
+          <Pressable 
+            style={styles.backButton} 
+            onPress={handleBack}
+            accessible={true}
+            accessibilityLabel="Вернуться назад"
+            accessibilityRole="button"
+          >
+            <View style={styles.backButtonBackground}>
+              <Ionicons 
+                name="chevron-back" 
+                size={Platform.OS === 'android' ? 26 : 24} 
+                color={Platform.OS === 'android' ? Colors.light.text : Colors.light.text} 
+              />
+            </View>
           </Pressable>
           <View style={styles.topBarContent}>
             <Text style={styles.topBarTitle}>Результаты поиска</Text>
@@ -136,6 +148,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.light.background,
+    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
@@ -158,14 +171,35 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.light.background,
+    width: Platform.OS === 'android' ? 48 : 40,
+    height: Platform.OS === 'android' ? 48 : 40,
+    borderRadius: Platform.OS === 'android' ? 24 : 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: DesignTokens.spacing.md,
-    ...DesignTokens.shadows.subtle,
+  },
+  backButtonBackground: {
+    width: '100%',
+    height: '100%',
+    borderRadius: Platform.OS === 'android' ? 24 : 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      android: {
+        backgroundColor: Colors.light.surface,
+        borderWidth: 2,
+        borderColor: Colors.light.border,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      ios: {
+        backgroundColor: Colors.light.background,
+        ...DesignTokens.shadows.subtle,
+      },
+    }),
   },
   topBarContent: {
     flex: 1,
@@ -174,11 +208,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: Colors.light.text,
+    ...Platform.select({
+      android: { fontFamily: 'sans-serif-medium' },
+      ios: { fontFamily: 'SF Pro Display' },
+    }),
   },
   topBarSubtitle: {
     fontSize: 14,
     color: Colors.light.textSecondary,
     marginTop: 2,
+    ...Platform.select({
+      android: { fontFamily: 'sans-serif' },
+      ios: { fontFamily: 'SF Pro Display' },
+    }),
   },
   filtersSection: {
     backgroundColor: Colors.light.surface,
@@ -193,6 +235,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.light.text,
     marginBottom: DesignTokens.spacing.sm,
+    ...Platform.select({
+      android: { fontFamily: 'sans-serif-medium' },
+      ios: { fontFamily: 'SF Pro Display' },
+    }),
   },
   filtersBar: {
     flexGrow: 0,
@@ -210,6 +256,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#FFFFFF',
+    ...Platform.select({
+      android: { fontFamily: 'sans-serif-medium' },
+      ios: { fontFamily: 'SF Pro Display' },
+    }),
   },
   colorDot: {
     width: 12,

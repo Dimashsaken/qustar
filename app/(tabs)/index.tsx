@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
+    Platform,
+    StatusBar as RNStatusBar,
     SafeAreaView,
     StyleSheet
 } from 'react-native';
@@ -118,7 +120,7 @@ export default function AllBirdsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" backgroundColor={Colors.light.background} />
-        <ThemedView style={styles.centerContainer}>
+        <ThemedView {...(Platform.OS === 'android' ? { surface: 'background' as const } : {})} style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.light.primary} />
           <ThemedText style={styles.loadingText}>
             {searchText.trim() ? 'Поиск птиц...' : 'Загрузка птиц...'}
@@ -132,7 +134,7 @@ export default function AllBirdsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="dark" backgroundColor={Colors.light.background} />
-        <ThemedView style={styles.header}>
+        <ThemedView {...(Platform.OS === 'android' ? { surface: 'background' as const } : {})} style={styles.header}>
           <ThemedText style={styles.title}>Qustar</ThemedText>
           <ExpandableSearchBar
             onSearchChange={handleSearchChange}
@@ -140,7 +142,7 @@ export default function AllBirdsScreen() {
             placeholder="Поиск птиц..."
           />
         </ThemedView>
-        <ThemedView style={styles.centerContainer}>
+        <ThemedView {...(Platform.OS === 'android' ? { surface: 'background' as const } : {})} style={styles.centerContainer}>
           <ThemedText style={styles.errorText}>
             {searchText.trim() 
               ? 'Ошибка при поиске птиц'
@@ -160,7 +162,7 @@ export default function AllBirdsScreen() {
       <StatusBar style="dark" backgroundColor={Colors.light.background} />
       
       {/* Header with Search */}
-      <ThemedView style={styles.header}>
+      <ThemedView {...(Platform.OS === 'android' ? { surface: 'surface' as const } : {})} style={styles.header}>
         <ThemedText style={styles.title}>Qustar</ThemedText>
         <ExpandableSearchBar
           onSearchChange={handleSearchChange}
@@ -170,44 +172,46 @@ export default function AllBirdsScreen() {
       </ThemedView>
 
       {/* Content with smooth transitions */}
-      <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
-        {/* Birds Grid */}
-        {birds && birds.length > 0 ? (
-          <FlashList
-            data={birds}
-            renderItem={renderBird}
-            getItemType={getItemType}
-            numColumns={2}
-            estimatedItemSize={220}
-            contentContainerStyle={styles.gridContent}
-            showsVerticalScrollIndicator={false}
-            // Performance optimizations
-            removeClippedSubviews={true}
-            // Accessibility
-            accessible={true}
-            accessibilityLabel={
-              searchText.trim() 
-                ? `Результаты поиска птиц по запросу "${searchText.trim()}"`
-                : "Список всех птиц Казахстана"
-            }
-          />
-        ) : (
-          <ThemedView style={styles.emptyStateContainer}>
-            <ThemedText style={styles.emptyText}>
-              {searchText.trim() 
-                ? `По запросу "${searchText.trim()}" ничего не найдено`
-                : 'Список птиц пуст'
+      <ThemedView {...(Platform.OS === 'android' ? { surface: 'background' as const } : {})} style={styles.contentWrapper}>
+        <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+          {/* Birds Grid */}
+          {birds && birds.length > 0 ? (
+            <FlashList
+              data={birds}
+              renderItem={renderBird}
+              getItemType={getItemType}
+              numColumns={2}
+              estimatedItemSize={220}
+              contentContainerStyle={styles.gridContent}
+              showsVerticalScrollIndicator={false}
+              // Performance optimizations
+              removeClippedSubviews={true}
+              // Accessibility
+              accessible={true}
+              accessibilityLabel={
+                searchText.trim() 
+                  ? `Результаты поиска птиц по запросу "${searchText.trim()}"`
+                  : "Список всех птиц Казахстана"
               }
-            </ThemedText>
-            <ThemedText style={styles.emptySubtext}>
-              {searchText.trim() 
-                ? 'Попробуйте изменить поисковый запрос'
-                : 'Проверьте подключение к базе данных'
-              }
-            </ThemedText>
-          </ThemedView>
-        )}
-      </Animated.View>
+            />
+          ) : (
+            <ThemedView {...(Platform.OS === 'android' ? { surface: 'background' as const } : {})} style={styles.emptyStateContainer}>
+              <ThemedText style={styles.emptyText}>
+                {searchText.trim() 
+                  ? `По запросу "${searchText.trim()}" ничего не найдено`
+                  : 'Список птиц пуст'
+                }
+              </ThemedText>
+              <ThemedText style={styles.emptySubtext}>
+                {searchText.trim() 
+                  ? 'Попробуйте изменить поисковый запрос'
+                  : 'Проверьте подключение к базе данных'
+                }
+              </ThemedText>
+            </ThemedView>
+          )}
+        </Animated.View>
+      </ThemedView>
     </SafeAreaView>
   );
 }
@@ -216,6 +220,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.surface, // Pure white background
+    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
   },
   header: {
     backgroundColor: Colors.light.surface, // Pure white header
@@ -236,6 +241,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 28,
     flex: 1,
+  },
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
   },
   contentContainer: {
     flex: 1,

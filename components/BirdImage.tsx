@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Colors } from '../constants/Colors';
 import { useBirdImageUrls } from '../hooks/useBirds';
 import { getBirdImageCacheKey } from '../lib/imageUtils';
 
@@ -117,26 +118,53 @@ BirdImage.displayName = 'BirdImage';
 
 const styles = StyleSheet.create({
   image: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Platform.OS === 'android' ? Colors.light.surfaceAlt : '#ffffff',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderWidth: Platform.OS === 'android' ? 1.5 : 1,
+    borderColor: Platform.OS === 'android' ? Colors.light.border : '#e9ecef',
     overflow: 'hidden',
+    // Add subtle shadow for better definition on Android only
+    ...Platform.select({
+      android: {
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      ios: {
+        // Keep original iOS styling
+      }
+    }),
   },
   placeholder: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Platform.OS === 'android' ? Colors.light.surfaceAlt : '#ffffff',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderWidth: Platform.OS === 'android' ? 1.5 : 1,
+    borderColor: Platform.OS === 'android' ? Colors.light.border : '#e9ecef',
     overflow: 'hidden',
+    // Add subtle shadow for better definition on Android only
+    ...Platform.select({
+      android: {
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      ios: {
+        // Keep original iOS styling
+      }
+    }),
   },
   placeholderText: {
-    color: '#6c757d',
+    color: Platform.OS === 'android' ? Colors.light.textMuted : '#6c757d',
   },
   placeholderSubText: {
-    color: '#adb5bd',
+    color: Platform.OS === 'android' ? Colors.light.textMuted : '#adb5bd',
     marginTop: 2,
+    opacity: Platform.OS === 'android' ? 0.7 : 1,
   },
 }); 

@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { Animated, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors, DesignTokens } from '../constants/Colors';
 import type { BirdListItem } from '../types/bird';
 import { BirdImage } from './BirdImage';
+import { ThemedText } from './ThemedText';
+import { ThemedView } from './ThemedView';
 
 interface BirdCardProps {
   bird: BirdListItem;
@@ -68,6 +70,13 @@ export const BirdCard: React.FC<BirdCardProps> = React.memo(({
   const contentStyle = isGrid ? styles.gridContent : styles.listContent;
   const imageSize = isGrid ? 120 : 64;
 
+  // Use ThemedView/ThemedText for Android, regular View/Text for iOS
+  const ContentWrapper = Platform.OS === 'android' ? ThemedView : View;
+  const ImageContainer = Platform.OS === 'android' ? ThemedView : View;
+  const TextContainer = Platform.OS === 'android' ? ThemedView : View;
+  const TextComponent = Platform.OS === 'android' ? ThemedText : Text;
+  const MetadataRow = Platform.OS === 'android' ? ThemedView : View;
+
   return (
     <Animated.View style={{ transform: [{ scale: animatedValue }] }}>
       <Pressable 
@@ -79,8 +88,8 @@ export const BirdCard: React.FC<BirdCardProps> = React.memo(({
         accessibilityRole="button"
         accessibilityLabel={`Открыть информацию о птице ${bird.common_name_ru || bird.common_name_en}`}
       >
-        <View style={contentStyle}>
-          <View style={isGrid ? styles.gridImageContainer : styles.imageContainer}>
+        <ContentWrapper {...(Platform.OS === 'android' ? { surface: 'surface' as const } : {})} style={contentStyle}>
+          <ImageContainer style={isGrid ? styles.gridImageContainer : styles.imageContainer}>
             <BirdImage 
               birdId={bird.id} 
               scientificName={bird.scientific_name}
@@ -88,35 +97,35 @@ export const BirdCard: React.FC<BirdCardProps> = React.memo(({
               priority={imagePriority}
               style={isGrid ? styles.gridImage : styles.image}
             />
-          </View>
+          </ImageContainer>
           
-          <View style={isGrid ? styles.gridTextContainer : styles.textContainer}>
-            <Text style={styles.primaryName} numberOfLines={isGrid ? 2 : 1}>
+          <TextContainer style={isGrid ? styles.gridTextContainer : styles.textContainer}>
+            <TextComponent style={styles.primaryName} numberOfLines={isGrid ? 2 : 1}>
               {displayName}
-            </Text>
+            </TextComponent>
             
             {kazakhName && (
-              <Text style={styles.kazakhName} numberOfLines={1}>
+              <TextComponent style={styles.kazakhName} numberOfLines={1}>
                 {kazakhName}
-              </Text>
+              </TextComponent>
             )}
             
             {!isGrid && (
-              <View style={styles.metadataRow}>
+              <MetadataRow style={styles.metadataRow}>
                 {family && (
-                  <Text style={styles.metadata} numberOfLines={1}>
+                  <TextComponent style={styles.metadata} numberOfLines={1}>
                     {family}
-                  </Text>
+                  </TextComponent>
                 )}
                 {size && (
-                  <Text style={[styles.metadata, styles.size]} numberOfLines={1}>
+                  <TextComponent style={[styles.metadata, styles.size]} numberOfLines={1}>
                     {size}
-                  </Text>
+                  </TextComponent>
                 )}
-              </View>
+              </MetadataRow>
             )}
-          </View>
-        </View>
+          </TextContainer>
+        </ContentWrapper>
       </Pressable>
     </Animated.View>
   );
@@ -127,8 +136,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     marginHorizontal: DesignTokens.spacing.lg,
     marginVertical: DesignTokens.spacing.xs,
-    borderRadius: DesignTokens.borderRadius.card, // 12px corner radius
-    ...DesignTokens.shadows.card, // 2px × 4px × 8px shadow
+    borderRadius: DesignTokens.borderRadius.card,
+    borderWidth: Platform.OS === 'android' ? 1 : 0,
+    borderColor: Platform.OS === 'android' ? Colors.light.border : 'transparent',
+    // Platform-specific shadows
+    ...Platform.select({
+      ios: DesignTokens.shadows.card,
+      android: {
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      }
+    }),
   },
   gridContainer: {
     width: gridItemWidth,
@@ -163,18 +184,28 @@ const styles = StyleSheet.create({
   primaryName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: Colors.light.text,
     marginBottom: 2,
     textAlign: 'center',
-    fontFamily: 'SF Pro Display',
+    // Keep original iOS colors, only change Android
+    ...(Platform.OS === 'ios' ? {
+      color: Colors.light.text,
+      fontFamily: 'SF Pro Display',
+    } : {
+      fontFamily: 'sans-serif-medium',
+    }),
   },
   kazakhName: {
     fontSize: 14,
-    color: Colors.light.textSecondary,
     fontStyle: 'italic',
     marginBottom: 4,
     textAlign: 'center',
-    fontFamily: 'SF Pro Display',
+    // Keep original iOS colors, only change Android
+    ...(Platform.OS === 'ios' ? {
+      color: Colors.light.textSecondary,
+      fontFamily: 'SF Pro Display',
+    } : {
+      fontFamily: 'sans-serif',
+    }),
   },
   metadataRow: {
     flexDirection: 'row',
@@ -182,9 +213,14 @@ const styles = StyleSheet.create({
   },
   metadata: {
     fontSize: 12,
-    color: Colors.light.textMuted,
     marginRight: 8,
-    fontFamily: 'SF Pro Display',
+    // Keep original iOS colors, only change Android
+    ...(Platform.OS === 'ios' ? {
+      color: Colors.light.textMuted,
+      fontFamily: 'SF Pro Display',
+    } : {
+      fontFamily: 'sans-serif',
+    }),
   },
   size: {
     fontWeight: '500',

@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ActivityIndicator, Dimensions, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BirdImage } from '../../components/BirdImage';
 import { ThemedText } from '../../components/ThemedText';
 import { Colors, DesignTokens } from '../../constants/Colors';
@@ -354,7 +354,8 @@ export default function BirdDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: { 
     flex: 1, 
-    backgroundColor: Colors.light.surfaceAlt 
+    backgroundColor: Colors.light.surfaceAlt,
+    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
   },
   container: { 
     flex: 1, 

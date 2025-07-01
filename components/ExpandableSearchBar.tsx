@@ -4,6 +4,7 @@ import {
     Animated,
     Dimensions,
     Easing,
+    Platform,
     StyleSheet,
     TextInput,
     TouchableOpacity,
@@ -173,14 +174,16 @@ export const ExpandableSearchBar: React.FC<ExpandableSearchBarProps> = ({
               onPress={collapseSearchBar}
               activeOpacity={0.7}
               accessible={true}
-              accessibilityLabel="Закрыть поиск"
+              accessibilityLabel="Закрыть поиск и вернуться к списку"
               accessibilityRole="button"
             >
-              <Ionicons
-                name="close"
-                size={18}
-                color={Colors.light.textSecondary}
-              />
+              <View style={styles.closeButtonBackground}>
+                <Ionicons
+                  name="close"
+                  size={Platform.OS === 'android' ? 20 : 18}
+                  color={Platform.OS === 'android' ? Colors.light.text : Colors.light.textSecondary}
+                />
+              </View>
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -238,10 +241,28 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   closeButton: {
-    width: 36,
+    width: Platform.OS === 'android' ? 44 : 36,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: DesignTokens.spacing.xs,
+  },
+  closeButtonBackground: {
+    ...Platform.select({
+      android: {
+        backgroundColor: Colors.light.surfaceAlt,
+        borderRadius: 16,
+        width: 32,
+        height: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.light.border,
+      },
+      ios: {
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+    }),
   },
 }); 
