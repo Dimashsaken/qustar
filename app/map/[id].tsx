@@ -56,13 +56,7 @@ export default function BirdMapScreen() {
     };
   });
 
-  /**
-   * Resets zoom to default
-   */
-  const handleResetZoom = () => {
-    scale.value = withSpring(1);
-    savedScale.value = 1;
-  };
+
 
   /**
    * Shows the map legend tutorial
@@ -125,14 +119,9 @@ export default function BirdMapScreen() {
           </View>
 
           <View style={styles.headerActions}>
-            {mapUrl && (
+            {mapUrl && Platform.OS === 'ios' && (
               <Pressable style={styles.actionButton} onPress={handleShowLegend}>
                 <Text style={styles.helpIcon}>❓</Text>
-              </Pressable>
-            )}
-            {mapUrl && (
-              <Pressable style={styles.actionButton} onPress={handleResetZoom}>
-                <Text style={styles.resetIcon}>🔍</Text>
               </Pressable>
             )}
           </View>
@@ -157,24 +146,26 @@ export default function BirdMapScreen() {
         </View>
 
         {/* Instructions overlay */}
-        {mapUrl && (
+        {mapUrl && Platform.OS === 'ios' && (
           <View style={styles.instructionsOverlay}>
             <ThemedText type="caption" style={styles.instructionsText}>
               Используйте жест щипка для увеличения карты
             </ThemedText>
             <Pressable onPress={handleShowLegend}>
               <ThemedText type="caption" style={[styles.instructionsText, styles.helpLink]}>
-                • Нажмите ❓ для объяснения символов
+                • Нажмите ❓ для справочника по карте
               </ThemedText>
             </Pressable>
           </View>
         )}
 
-        {/* Map Legend Modal */}
-        <MapLegend 
-          visible={showLegend}
-          onClose={() => setShowLegend(false)}
-        />
+        {/* Map Legend Modal - Only on iOS */}
+        {Platform.OS === 'ios' && (
+          <MapLegend 
+            visible={showLegend}
+            onClose={() => setShowLegend(false)}
+          />
+        )}
       </SafeAreaView>
     </>
   );
@@ -238,17 +229,6 @@ const styles = StyleSheet.create({
   helpIcon: {
     fontSize: 16,
     color: 'white',
-  },
-  resetButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  resetIcon: {
-    fontSize: 18,
   },
   
   // Map container
