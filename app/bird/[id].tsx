@@ -1,15 +1,70 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ActivityIndicator, Dimensions, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Linking, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BirdImage } from '../../components/BirdImage';
 import { BirdMap } from '../../components/BirdMap';
 import { ThemedText } from '../../components/ThemedText';
 import { Colors, DesignTokens } from '../../constants/Colors';
 import { useBird } from '../../hooks/useBirds';
+import { Bird } from '../../types/bird';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const HERO_HEIGHT = screenHeight * 0.35; // 35% of screen height
+
+/**
+ * Constructs YouTube search URL for bird videos
+ * @param bird - Bird object with names and scientific name
+ * @returns string - YouTube search URL
+ */
+const createYouTubeSearchUrl = (bird: Bird): string => {
+  const searchTerms: string[] = [];
+  
+  // Prioritize scientific name for accuracy
+  if (bird.scientific_name) {
+    searchTerms.push(bird.scientific_name);
+  }
+  
+  // Add English common name if available
+  if (bird.common_name_en) {
+    searchTerms.push(bird.common_name_en);
+  }
+  
+  // Add "bird video" for better results
+  searchTerms.push('bird video');
+  
+  const query = searchTerms.join(' ');
+  const encodedQuery = encodeURIComponent(query);
+  
+  return `https://www.youtube.com/results?search_query=${encodedQuery}`;
+};
+
+/**
+ * Handles video button press to open YouTube search
+ * @param bird - Bird object to search for
+ */
+const handleVideoPress = async (bird: Bird): Promise<void> => {
+  try {
+    const youtubeUrl = createYouTubeSearchUrl(bird);
+    const canOpen = await Linking.canOpenURL(youtubeUrl);
+    
+    if (canOpen) {
+      await Linking.openURL(youtubeUrl);
+    } else {
+      Alert.alert(
+        'Ошибка',
+        'Не удалось открыть YouTube. Проверьте, что у вас установлено приложение YouTube или браузер.',
+        [{ text: 'OK' }]
+      );
+    }
+  } catch (error) {
+    Alert.alert(
+      'Ошибка',
+      'Произошла ошибка при открытии видео. Попробуйте снова.',
+      [{ text: 'OK' }]
+    );
+  }
+};
 
 /**
  * Bird detail screen showing comprehensive bird information
@@ -129,14 +184,28 @@ export default function BirdDetailScreen() {
           <View style={styles.contentCard}>
             {/* Bird name section at top of content */}
             <View style={styles.titleSection}>
-              <ThemedText type="heading" style={styles.mainTitle}>
-                {displayName}
-              </ThemedText>
-              {bird.scientific_name && (
-                <ThemedText type="default" style={styles.scientificName}>
-                  {bird.scientific_name}
-                </ThemedText>
-              )}
+              <View style={styles.titleContainer}>
+                <View style={styles.nameContainer}>
+                  <ThemedText type="heading" style={styles.mainTitle}>
+                    {displayName}
+                  </ThemedText>
+                  {bird.scientific_name && (
+                    <ThemedText type="default" style={styles.scientificName}>
+                      {bird.scientific_name}
+                    </ThemedText>
+                  )}
+                </View>
+                
+                {/* Video button next to name */}
+                <Pressable 
+                  style={styles.videoButton} 
+                  onPress={() => handleVideoPress(bird)}
+                  accessibilityLabel="Открыть видео птицы на YouTube"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.videoButtonIcon}>▶</Text>
+                </Pressable>
+              </View>
             </View>
             
             {/* Migration & Habitat Map */}
@@ -147,7 +216,7 @@ export default function BirdDetailScreen() {
               <View style={styles.sectionDivider} />
               <BirdMap 
                 birdId={bird.id}
-                scientificName={bird.scientific_name}
+                scientificName={bird.scientific_name ?? undefined}
               />
             </View>
             
@@ -407,6 +476,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   
+  // Video button
+  videoButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.light.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...DesignTokens.shadows.card,
+  },
+  videoButtonIcon: {
+    color: Colors.light.surface,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 2, // Optical centering for play icon
+  },
+  
   // Content card with elevation
   contentCard: {
     marginTop: -DesignTokens.spacing.xl,
@@ -526,6 +612,15 @@ const styles = StyleSheet.create({
   // Bird name section at top of content
   titleSection: {
     marginBottom: DesignTokens.spacing.xl,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  nameContainer: {
+    flex: 1,
+    marginRight: DesignTokens.spacing.md,
   },
   mainTitle: {
     color: Colors.light.text,
