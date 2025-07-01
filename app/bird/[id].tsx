@@ -211,7 +211,7 @@ export default function BirdDetailScreen() {
             {/* Migration & Habitat Map */}
             <View style={styles.sectionCard}>
               <ThemedText type="title" style={styles.sectionTitle}>
-                Карта ареала и миграции
+                Карта миграции
               </ThemedText>
               <View style={styles.sectionDivider} />
               <BirdMap 
