@@ -1,12 +1,19 @@
 import { FlashList } from '@shopify/flash-list';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useMemo } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Animated,
+    SafeAreaView,
+    StyleSheet
+} from 'react-native';
 import { BirdCard } from '../../components/BirdCard';
+import { ExpandableSearchBar } from '../../components/ExpandableSearchBar';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { Colors, DesignTokens } from '../../constants/Colors';
 import { useBirds } from '../../hooks/useBirds';
+import { useFilteredBirds } from '../../hooks/useFilteredBirds';
 import { useImageCache } from '../../hooks/useImageCache';
 import { getPrimaryBirdImageUrl } from '../../lib/imageUtils';
 import type { BirdListItem } from '../../types/bird';
@@ -16,27 +23,77 @@ import type { BirdListItem } from '../../types/bird';
  * Implements mobile-first design with 75% neutrals and sky-blue accents
  * Uses FlashList for optimal performance with large datasets in a 2-column grid
  * Features optimized image caching and preloading for smooth scrolling
+ * Includes expandable search functionality with smooth transitions
  * @returns JSX.Element - AllBirds screen component
  */
 export default function AllBirdsScreen() {
-  const { data: birds, isLoading, error } = useBirds();
+  const [searchText, setSearchText] = useState('');
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  
+  // Use filtered birds when searching, all birds when not
+  const { data: allBirds, isLoading: allBirdsLoading, error: allBirdsError } = useBirds();
+  const { 
+    data: filteredBirds, 
+    isLoading: filteredLoading, 
+    error: filteredError 
+  } = useFilteredBirds(
+    searchText.trim() ? { searchText: searchText.trim() } : undefined
+  );
+  
+  // Determine which dataset to use
+  const birds = searchText.trim() ? filteredBirds : allBirds;
+  const isLoading = searchText.trim() ? filteredLoading : allBirdsLoading;
+  const error = searchText.trim() ? filteredError : allBirdsError;
+  
   const { preloadImages } = useImageCache({ maxCacheSize: 150, maxCacheAge: 7200 });
 
-  // Generate image URLs for preloading
-  const imageUrls = useMemo(() => {
-    if (!birds) return [];
-    
-    return birds.slice(0, 50).map(bird => 
-      getPrimaryBirdImageUrl(bird.id, bird.scientific_name)
-    ).filter(url => url.length > 0);
-  }, [birds]);
+  // Smooth transition animation when search results change
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [searchText, fadeAnim]);
 
   // Preload images when bird data is available
   useEffect(() => {
-    if (imageUrls.length > 0) {
-      preloadImages(imageUrls);
-    }
-  }, [imageUrls, preloadImages]);
+    const preloadSignedUrls = async () => {
+      if (!birds || birds.length === 0) return;
+
+      try {
+        // Generate signed URLs for the first 20 birds
+        const urlPromises = birds.slice(0, 20).map(bird => 
+          getPrimaryBirdImageUrl(bird.id, bird.scientific_name)
+        );
+        
+        const imageUrls = await Promise.all(urlPromises);
+        const validUrls = imageUrls.filter(url => url.length > 0);
+        
+        if (validUrls.length > 0) {
+          await preloadImages(validUrls);
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to preload signed URLs:', error);
+      }
+    };
+
+    preloadSignedUrls();
+  }, [birds, preloadImages]);
+
+  /**
+   * Handles search text changes from the expandable search bar
+   * @param text - New search text
+   */
+  const handleSearchChange = (text: string) => {
+    setSearchText(text);
+  };
 
   /**
    * Renders individual bird item for FlashList grid
@@ -48,160 +105,159 @@ export default function AllBirdsScreen() {
   );
 
   /**
-   * Optimized key extractor for FlashList performance
-   * @param item - Bird data
-   * @returns string - Unique key for the item
+   * Optimized getItemType for FlashList performance
+   * @param item - Bird data item
+   * @returns string - Item type for recycling optimization
    */
-  const keyExtractor = (item: BirdListItem): string => `bird-${item.id}`;
-
-  /**
-   * Renders loading state
-   * @returns JSX.Element - Loading indicator
-   */
-  const renderLoading = () => (
-    <>
-      <StatusBar style="dark" backgroundColor="transparent" translucent />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Colors.light.primary} />
-          <ThemedText type="default" style={styles.loadingText}>
-            Loading Kazakhstan birds...
-          </ThemedText>
-        </View>
-      </SafeAreaView>
-    </>
-  );
-
-  /**
-   * Renders error state
-   * @returns JSX.Element - Error message
-   */
-  const renderError = () => (
-    <>
-      <StatusBar style="dark" backgroundColor="transparent" translucent />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centerContainer}>
-          <ThemedText type="title" style={styles.errorText}>
-            Failed to load birds
-          </ThemedText>
-          <ThemedText type="default" style={styles.errorSubtext}>
-            {error?.message || 'Please check your connection and try again'}
-          </ThemedText>
-        </View>
-      </SafeAreaView>
-    </>
-  );
-
-  /**
-   * Renders empty state
-   * @returns JSX.Element - Empty state message
-   */
-  const renderEmpty = () => (
-    <>
-      <StatusBar style="dark" backgroundColor="transparent" translucent />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centerContainer}>
-          <ThemedText type="title" style={styles.emptyText}>
-            No birds found
-          </ThemedText>
-          <ThemedText type="default" style={styles.emptySubtext}>
-            The bird database appears to be empty. Please check your connection and try again.
-          </ThemedText>
-        </View>
-      </SafeAreaView>
-    </>
-  );
+  const getItemType = (item: BirdListItem) => {
+    // Use bird family for better recycling optimization
+    return item.family || 'unknown';
+  };
 
   if (isLoading) {
-    return renderLoading();
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="dark" backgroundColor={Colors.light.background} />
+        <ThemedView style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Colors.light.primary} />
+          <ThemedText style={styles.loadingText}>
+            {searchText.trim() ? 'Поиск птиц...' : 'Загрузка птиц...'}
+          </ThemedText>
+        </ThemedView>
+      </SafeAreaView>
+    );
   }
 
   if (error) {
-    return renderError();
-  }
-
-  if (!birds || birds.length === 0) {
-    return renderEmpty();
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="dark" backgroundColor={Colors.light.background} />
+        <ThemedView style={styles.header}>
+          <ThemedText style={styles.title}>Qustar</ThemedText>
+          <ExpandableSearchBar
+            onSearchChange={handleSearchChange}
+            searchText={searchText}
+            placeholder="Поиск птиц..."
+          />
+        </ThemedView>
+        <ThemedView style={styles.centerContainer}>
+          <ThemedText style={styles.errorText}>
+            {searchText.trim() 
+              ? 'Ошибка при поиске птиц'
+              : 'Не удалось загрузить список птиц'
+            }
+          </ThemedText>
+          <ThemedText style={styles.errorSubtext}>
+            Проверьте подключение к интернету и попробуйте еще раз
+          </ThemedText>
+        </ThemedView>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <>
-      <StatusBar style="dark" backgroundColor="transparent" translucent />
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.container}>
-          <View style={styles.header}>
-            <View style={styles.headerContent}>
-              <ThemedText type="heading" style={styles.title}>
-                Qustar
-              </ThemedText>
-              <ThemedText type="caption" style={styles.tagline}>
-                Kazakhstan Bird Identifier
-              </ThemedText>
-            </View>
-          </View>
-          
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" backgroundColor={Colors.light.background} />
+      
+      {/* Header with Search */}
+      <ThemedView style={styles.header}>
+        <ThemedText style={styles.title}>Qustar</ThemedText>
+        <ExpandableSearchBar
+          onSearchChange={handleSearchChange}
+          searchText={searchText}
+          placeholder="Поиск птиц..."
+        />
+      </ThemedView>
+
+      {/* Content with smooth transitions */}
+      <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+        {/* Birds Grid */}
+        {birds && birds.length > 0 ? (
           <FlashList
             data={birds}
             renderItem={renderBird}
+            getItemType={getItemType}
             numColumns={2}
-            estimatedItemSize={200}
-            keyExtractor={keyExtractor}
-            showsVerticalScrollIndicator={false}
+            estimatedItemSize={220}
             contentContainerStyle={styles.gridContent}
-            ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+            showsVerticalScrollIndicator={false}
+            // Performance optimizations
             removeClippedSubviews={true}
-            onEndReachedThreshold={0.5}
-            getItemType={() => 'bird-card'}
+            // Accessibility
+            accessible={true}
+            accessibilityLabel={
+              searchText.trim() 
+                ? `Результаты поиска птиц по запросу "${searchText.trim()}"`
+                : "Список всех птиц Казахстана"
+            }
           />
-        </ThemedView>
-      </SafeAreaView>
-    </>
+        ) : (
+          <ThemedView style={styles.emptyStateContainer}>
+            <ThemedText style={styles.emptyText}>
+              {searchText.trim() 
+                ? `По запросу "${searchText.trim()}" ничего не найдено`
+                : 'Список птиц пуст'
+              }
+            </ThemedText>
+            <ThemedText style={styles.emptySubtext}>
+              {searchText.trim() 
+                ? 'Попробуйте изменить поисковый запрос'
+                : 'Проверьте подключение к базе данных'
+              }
+            </ThemedText>
+          </ThemedView>
+        )}
+      </Animated.View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.light.surfaceAlt, // Mist grey background
-  },
   container: {
     flex: 1,
-    backgroundColor: Colors.light.surfaceAlt,
+    backgroundColor: Colors.light.surface, // Pure white background
   },
   header: {
     backgroundColor: Colors.light.surface, // Pure white header
     paddingHorizontal: DesignTokens.spacing.lg,
-    paddingTop: DesignTokens.spacing.lg,
-    paddingBottom: DesignTokens.spacing.md,
+    paddingTop: DesignTokens.spacing.xs,
+    paddingBottom: DesignTokens.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
-    ...DesignTokens.shadows.subtle,
-  },
-  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    ...DesignTokens.shadows.subtle,
   },
   title: {
     color: Colors.light.primary, // Cerulean for primary accent
-    marginBottom: DesignTokens.spacing.xs,
     letterSpacing: 0.5,
+    fontSize: 28,
+    fontWeight: '700',
+    lineHeight: 28,
+    flex: 1,
   },
-  tagline: {
-    color: Colors.light.textSecondary,
-    fontWeight: '500',
-    opacity: 0.8,
+  contentContainer: {
+    flex: 1,
+    backgroundColor: Colors.light.surface, // Pure white background
   },
   gridContent: {
     paddingVertical: DesignTokens.spacing.xs,
-    paddingHorizontal: DesignTokens.spacing.xs,
-  },
-  itemSeparator: {
-    height: DesignTokens.spacing.xs,
+    paddingHorizontal: DesignTokens.spacing.md,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: DesignTokens.spacing.xxl * 1.5,
+    backgroundColor: Colors.light.surface, // Pure white background
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: DesignTokens.spacing.xxl * 1.5,
+    backgroundColor: Colors.light.surface, // Pure white background
   },
   loadingText: {
     marginTop: DesignTokens.spacing.lg,
@@ -216,17 +272,20 @@ const styles = StyleSheet.create({
   errorSubtext: {
     textAlign: 'center',
     lineHeight: 20,
-    color: Colors.light.textMuted,
+    color: '#CCCCCC', // Very light grey for error subtext
   },
   emptyText: {
     textAlign: 'center',
     marginBottom: DesignTokens.spacing.sm,
-    color: Colors.light.textMuted,
+    color: '#BBBBBB', // Light grey for empty state main text
+    fontSize: 16,
+    fontWeight: '500',
   },
   emptySubtext: {
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: DesignTokens.spacing.xxl,
-    color: Colors.light.textMuted,
+    color: '#CCCCCC', // Very light grey for empty state subtext
+    fontSize: 14,
   },
 });

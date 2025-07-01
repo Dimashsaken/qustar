@@ -20,7 +20,7 @@ export const ColorFilter: React.FC<ColorFilterProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Цвет оперения</Text>
+      <Text style={styles.title}>Цвета птицы</Text>
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}

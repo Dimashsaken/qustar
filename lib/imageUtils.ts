@@ -1,62 +1,233 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Generates possible image URLs for a bird
- * Returns multiple URLs to try in order of preference
+ * Cached signed URL with TTL
+ */
+interface CachedSignedUrl {
+  url: string;
+  expiresAt: number;
+}
+
+/**
+ * In-memory cache for signed URLs with TTL management
+ */
+class SignedUrlCache {
+  private cache = new Map<string, CachedSignedUrl>();
+  private readonly TTL_MS = 50 * 60 * 1000; // 50 minutes (10min buffer before 1hr expiry)
+
+  /**
+   * Gets cached URL if still valid
+   */
+  get(key: string): string | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+    
+    if (Date.now() > cached.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return cached.url;
+  }
+
+  /**
+   * Sets URL in cache with TTL
+   */
+  set(key: string, url: string): void {
+    this.cache.set(key, {
+      url,
+      expiresAt: Date.now() + this.TTL_MS
+    });
+  }
+
+  /**
+   * Clears expired entries
+   */
+  cleanup(): void {
+    const now = Date.now();
+    for (const [key, cached] of this.cache.entries()) {
+      if (now > cached.expiresAt) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Gets cache statistics
+   */
+  getStats() {
+    return {
+      size: this.cache.size,
+      keys: Array.from(this.cache.keys())
+    };
+  }
+}
+
+// Global cache instance
+const urlCache = new SignedUrlCache();
+
+// Cleanup expired URLs every 10 minutes
+setInterval(() => urlCache.cleanup(), 10 * 60 * 1000);
+
+/**
+ * Performance monitoring for cache effectiveness
+ */
+class PerformanceMonitor {
+  private cacheHits = 0;
+  private cacheMisses = 0;
+  private totalRequests = 0;
+  private averageLoadTime = 0;
+
+  recordCacheHit() {
+    this.cacheHits++;
+    this.totalRequests++;
+  }
+
+  recordCacheMiss() {
+    this.cacheMisses++;
+    this.totalRequests++;
+  }
+
+  recordLoadTime(timeMs: number) {
+    this.averageLoadTime = (this.averageLoadTime + timeMs) / 2;
+  }
+
+  getStats() {
+    const hitRate = this.totalRequests > 0 ? (this.cacheHits / this.totalRequests) * 100 : 0;
+    return {
+      cacheHitRate: hitRate.toFixed(1) + '%',
+      totalRequests: this.totalRequests,
+      cacheHits: this.cacheHits,
+      cacheMisses: this.cacheMisses,
+      averageLoadTime: this.averageLoadTime.toFixed(0) + 'ms'
+    };
+  }
+
+  reset() {
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
+    this.totalRequests = 0;
+    this.averageLoadTime = 0;
+  }
+}
+
+// Global performance monitor
+const performanceMonitor = new PerformanceMonitor();
+
+/**
+ * Generates signed URLs for private bucket access with caching and performance monitoring
  * @param birdId - Bird ID
  * @param scientificName - Bird's scientific name
- * @returns Array of possible image URLs
+ * @returns Array of signed URLs with 1 hour expiry
  */
-export const generateBirdImageUrls = (birdId: string, scientificName?: string | null): string[] => {
+export const generateBirdImageUrls = async (birdId: string, scientificName?: string | null): Promise<string[]> => {
+  const startTime = Date.now();
   const urls: string[] = [];
   
   try {
+    const filenames: string[] = [];
+    
     if (scientificName) {
       // Primary format: {id}-{scientific-name-with-dashes}.jpeg
       const nameWithDashes = scientificName.trim().replace(/\s+/g, '-');
-      const primaryFilename = `${birdId}-${nameWithDashes}.jpeg`;
-      const { data: primaryUrl } = supabase.storage
-        .from('qustar-images')
-        .getPublicUrl(`bird-images/${primaryFilename}`);
-      urls.push(primaryUrl.publicUrl);
-      
-      // Alternative format: {id}-{scientific-name-with-dashes}.jpg
-      const altFilename = `${birdId}-${nameWithDashes}.jpg`;
-      const { data: altUrl } = supabase.storage
-        .from('qustar-images')
-        .getPublicUrl(`bird-images/${altFilename}`);
-      urls.push(altUrl.publicUrl);
+      filenames.push(`${birdId}-${nameWithDashes}.jpeg`);
+      filenames.push(`${birdId}-${nameWithDashes}.jpg`);
     }
     
     // Fallback formats
-    const fallbackJpeg = `${birdId}.jpeg`;
-    const fallbackJpg = `${birdId}.jpg`;
+    filenames.push(`${birdId}.jpeg`);
+    filenames.push(`${birdId}.jpg`);
     
-    const { data: fallbackUrl1 } = supabase.storage
-      .from('qustar-images')
-      .getPublicUrl(`bird-images/${fallbackJpeg}`);
-    urls.push(fallbackUrl1.publicUrl);
+    // Check cache first, then generate URLs for uncached files
+    const uncachedFilenames: string[] = [];
     
-    const { data: fallbackUrl2 } = supabase.storage
-      .from('qustar-images')
-      .getPublicUrl(`bird-images/${fallbackJpg}`);
-    urls.push(fallbackUrl2.publicUrl);
+    for (const filename of filenames) {
+      const cacheKey = `bird-images/${filename}`;
+      const cachedUrl = urlCache.get(cacheKey);
+      
+      if (cachedUrl) {
+        urls.push(cachedUrl);
+        performanceMonitor.recordCacheHit();
+      } else {
+        uncachedFilenames.push(filename);
+        performanceMonitor.recordCacheMiss();
+      }
+    }
+    
+    // Generate signed URLs for uncached files
+    if (uncachedFilenames.length > 0) {
+      const signedUrlPromises = uncachedFilenames.map(async (filename) => {
+        const { data, error } = await supabase.storage
+          .from('qustar-images')
+          .createSignedUrl(`bird-images/${filename}`, 3600);
+        
+        if (data?.signedUrl && !error) {
+          const cacheKey = `bird-images/${filename}`;
+          urlCache.set(cacheKey, data.signedUrl);
+          return data.signedUrl;
+        }
+        return null;
+      });
+      
+      const newUrls = await Promise.all(signedUrlPromises);
+      urls.push(...newUrls.filter((url): url is string => url !== null));
+    }
     
   } catch (error) {
-    console.error('🖼️ Error generating image URLs:', error);
+    console.error('🖼️ Error generating signed URLs:', error);
+  } finally {
+    const loadTime = Date.now() - startTime;
+    performanceMonitor.recordLoadTime(loadTime);
   }
   
   return urls;
 };
 
 /**
- * Gets the primary image URL for a bird (for preloading)
+ * Batch generates signed URLs for multiple birds efficiently
+ * @param birds - Array of bird objects with id and scientific_name
+ * @returns Map of birdId to signed URLs
+ */
+export const batchGenerateBirdImageUrls = async (
+  birds: Array<{ id: string; scientific_name?: string | null }>
+): Promise<Map<string, string[]>> => {
+  const results = new Map<string, string[]>();
+  const batchSize = 10; // Process in smaller batches to avoid overwhelming Supabase
+  
+  for (let i = 0; i < birds.length; i += batchSize) {
+    const batch = birds.slice(i, i + batchSize);
+    
+    const batchPromises = batch.map(async (bird) => {
+      const urls = await generateBirdImageUrls(bird.id, bird.scientific_name);
+      return { birdId: bird.id, urls };
+    });
+    
+    try {
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach(({ birdId, urls }) => {
+        results.set(birdId, urls);
+      });
+      
+      // Small delay between batches to be nice to Supabase
+      if (i + batchSize < birds.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    } catch (error) {
+      console.error('🖼️ Error in batch URL generation:', error);
+    }
+  }
+  
+  return results;
+};
+
+/**
+ * Gets the primary signed URL for a bird with caching
  * @param birdId - Bird ID
  * @param scientificName - Bird's scientific name
- * @returns Primary image URL
+ * @returns Promise<string> - Primary signed URL
  */
-export const getPrimaryBirdImageUrl = (birdId: string, scientificName?: string | null): string => {
-  const urls = generateBirdImageUrls(birdId, scientificName);
+export const getPrimaryBirdImageUrl = async (birdId: string, scientificName?: string | null): Promise<string> => {
+  const urls = await generateBirdImageUrls(birdId, scientificName);
   return urls[0] || '';
 };
 
@@ -78,4 +249,14 @@ export const IMAGE_SIZES = {
  */
 export const getBirdImageCacheKey = (birdId: string, size: number): string => {
   return `bird-${birdId}-${size}`;
+};
+
+/**
+ * Gets comprehensive performance and cache statistics
+ */
+export const getComprehensiveStats = () => {
+  return {
+    signedUrlCache: urlCache.getStats(),
+    performance: performanceMonitor.getStats()
+  };
 }; 

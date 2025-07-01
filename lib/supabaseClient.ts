@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 /**
  * Supabase configuration and client singleton
- * Connects to the QuStar bird database with read-only access
+ * Connects to the QuStar bird database with authenticated access
+ * Now supports private storage buckets with signed URL generation
  */
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
@@ -15,15 +16,40 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 /**
  * Singleton Supabase client instance
- * Configured for read-only access to bird data
+ * Configured for authenticated access to bird data and private storage
  */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: false, // No user authentication needed
+    persistSession: false, // No user authentication needed for bird data
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
   },
   realtime: {
     params: {
       eventsPerSecond: 2, // Limit realtime events for performance
     },
   },
-}); 
+  global: {
+    headers: {
+      'X-Client-Info': 'qustar-mobile/1.0.0',
+    },
+  },
+});
+
+// Test the connection on startup
+(async () => {
+  try {
+    const { count, error } = await supabase
+      .from('qustar-info')
+      .select('count', { count: 'exact' })
+      .limit(1);
+    
+    if (error) {
+      console.error('❌ Supabase connection test failed:', error.message);
+    } else {
+      console.log(`✅ Supabase connected. Found ${count} birds in database`);
+    }
+  } catch (err) {
+    console.error('❌ Supabase connection error:', err);
+  }
+})(); 

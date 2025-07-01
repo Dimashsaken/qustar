@@ -79,6 +79,7 @@ export const FilteredBirdsList: React.FC<FilteredBirdsListProps> = ({
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
     </View>
   );
@@ -127,6 +128,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   listContent: {
-    padding: DesignTokens.spacing.md,
+    paddingVertical: DesignTokens.spacing.sm,
+    paddingHorizontal: DesignTokens.spacing.md,
+    paddingBottom: DesignTokens.spacing.xl,
+  },
+  separator: {
+    height: DesignTokens.spacing.xs,
   },
 }); 

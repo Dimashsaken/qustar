@@ -14,7 +14,7 @@ const SIZE_SILHOUETTES = {
   'very-small': require('../../assets/images/20250630_1433_Силуэт скворца_simple_compose_01jyzrkj44ed991fcm288gkwf5.png'),
   'small-medium': require('../../assets/images/20250630_1433_Силуэт вороны_simple_compose_01jyzrm5p2ejvar1g4raa9brpw.png'),
   'large': require('../../assets/images/20250630_1434_Силуэт гуся_simple_compose_01jyzrpehweg5rft3asfm8grm2.png'),
-  'very-large': require('../../assets/images/20250630_1435_Силуэт Серой Цапли_simple_compose_01jyzrq3j0ehr8je2vh7ebsb3n.png'),
+  'very-large': require('../../assets/images/ChatGPT Image Jun 30, 2025, 06_53_16 PM.png'),
 };
 
 /**
@@ -104,24 +104,27 @@ const styles = StyleSheet.create({
     width: '48%',
     backgroundColor: Colors.light.background,
     borderRadius: DesignTokens.borderRadius.button,
-    padding: DesignTokens.spacing.md,
+    padding: DesignTokens.spacing.lg,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: Colors.light.border,
-    minHeight: 120,
+    minHeight: 160,
   },
   selectedButton: {
     backgroundColor: Colors.light.primaryAlt,
     borderColor: Colors.light.primary,
   },
   silhouetteImage: {
-    width: 40,
-    height: 40,
-    tintColor: Colors.light.textSecondary,
-    marginBottom: DesignTokens.spacing.xs,
+    width: 64,
+    height: 64,
+    tintColor: '#000000', // Make images appear as dark silhouettes
+    marginBottom: DesignTokens.spacing.md,
   },
   selectedImage: {
-    tintColor: Colors.light.primary,
+    opacity: 0.8,
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    borderRadius: 8,
   },
   sizeLabel: {
     fontSize: 14,

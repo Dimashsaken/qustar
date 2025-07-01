@@ -45,6 +45,29 @@ const matchesHabitat = (birdHabitat: string | null, filterHabitat: string): bool
 };
 
 /**
+ * Проверка соответствия птицы поисковому запросу
+ */
+const matchesSearchText = (bird: BirdListItem, searchText: string): boolean => {
+  if (!searchText) return true;
+  
+  const query = searchText.toLowerCase().trim();
+  if (query.length === 0) return true;
+  
+  // Поиск по всем именам птицы и научному названию
+  const searchFields = [
+    bird.common_name_en,
+    bird.common_name_kz,
+    bird.common_name_ru,
+    bird.scientific_name,
+    bird.family
+  ].filter(Boolean);
+  
+  return searchFields.some(field => 
+    field?.toLowerCase().includes(query)
+  );
+};
+
+/**
  * Получение птиц с расширенной фильтрацией
  */
 const fetchFilteredBirds = async (filters?: BirdSearchFilters): Promise<BirdListItem[]> => {
@@ -91,6 +114,13 @@ const fetchFilteredBirds = async (filters?: BirdSearchFilters): Promise<BirdList
 
   // Клиентская фильтрация для сложных случаев
   let filteredData = data;
+
+  // Фильтрация по поисковому тексту
+  if (filters?.searchText) {
+    filteredData = filteredData.filter(bird => 
+      matchesSearchText(bird, filters.searchText!)
+    );
+  }
 
   // Фильтрация по цветам
   if (filters?.colors && filters.colors.length > 0) {

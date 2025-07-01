@@ -101,36 +101,32 @@ export default function ResultsScreen() {
     <>
       <StatusBar style="dark" backgroundColor="transparent" translucent />
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          {/* Top Bar */}
-          <View style={styles.topBar}>
-            <Pressable style={styles.backButton} onPress={handleBack}>
-              <IconSymbol name="chevron.left" size={24} color={Colors.light.text} />
-            </Pressable>
-            <View style={styles.topBarContent}>
-              <Text style={styles.topBarTitle}>Результаты поиска</Text>
-              <Text style={styles.topBarSubtitle}>
-                Найдено: {birds.length} {birds.length === 1 ? 'птица' : birds.length < 5 ? 'птицы' : 'птиц'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Applied Filters */}
-          <View style={styles.filtersSection}>
-            <Text style={styles.filtersTitle}>Применённые фильтры:</Text>
-            {renderAppliedFilters()}
-          </View>
-
-          {/* Results */}
-          <View style={styles.resultsSection}>
-            <FilteredBirdsList
-              birds={birds}
-              isLoading={isLoading}
-              error={error}
-              hasActiveFilters={true}
-            />
+        {/* Top Bar */}
+        <View style={styles.topBar}>
+          <Pressable style={styles.backButton} onPress={handleBack}>
+            <IconSymbol name="chevron.left" size={24} color={Colors.light.text} />
+          </Pressable>
+          <View style={styles.topBarContent}>
+            <Text style={styles.topBarTitle}>Результаты поиска</Text>
+            <Text style={styles.topBarSubtitle}>
+              Найдено: {birds.length} {birds.length === 1 ? 'птица' : birds.length < 5 ? 'птицы' : 'птиц'}
+            </Text>
           </View>
         </View>
+
+        {/* Applied Filters */}
+        <View style={styles.filtersSection}>
+          <Text style={styles.filtersTitle}>Применённые фильтры:</Text>
+          {renderAppliedFilters()}
+        </View>
+
+        {/* Results */}
+        <FilteredBirdsList
+          birds={birds}
+          isLoading={isLoading}
+          error={error}
+          hasActiveFilters={true}
+        />
       </SafeAreaView>
     </>
   );
@@ -152,6 +148,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   backButton: {
     width: 40,
@@ -182,6 +186,7 @@ const styles = StyleSheet.create({
     paddingVertical: DesignTokens.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
+    maxHeight: 120,
   },
   filtersTitle: {
     fontSize: 16,
@@ -215,10 +220,5 @@ const styles = StyleSheet.create({
   whiteColorBorder: {
     borderWidth: 1,
     borderColor: Colors.light.border,
-  },
-  resultsSection: {
-    flex: 1,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingTop: DesignTokens.spacing.md,
   },
 }); 

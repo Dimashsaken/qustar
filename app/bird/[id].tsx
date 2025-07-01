@@ -31,7 +31,7 @@ export default function BirdDetailScreen() {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.light.primary} />
           <ThemedText type="default" style={styles.loadingText}>
-            Loading bird details...
+            Загрузка информации о птице...
           </ThemedText>
         </View>
       </SafeAreaView>
@@ -48,14 +48,14 @@ export default function BirdDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
           <ThemedText type="title" style={styles.errorText}>
-            Failed to load bird details
+            Не удалось загрузить информацию о птице
           </ThemedText>
           <ThemedText type="default" style={styles.errorSubtext}>
-            {error?.message || 'Please check your connection and try again'}
+            {error?.message || 'Проверьте соединение и попробуйте снова'}
           </ThemedText>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <ThemedText type="bold" style={styles.backButtonTextWhite}>
-              Back
+              Назад
             </ThemedText>
           </Pressable>
         </View>
@@ -73,14 +73,14 @@ export default function BirdDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
           <ThemedText type="title" style={styles.errorText}>
-            Bird not found
+            Птица не найдена
           </ThemedText>
           <ThemedText type="default" style={styles.errorSubtext}>
-            The requested bird could not be found in our database
+            Запрашиваемая птица не найдена в нашей базе данных
           </ThemedText>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <ThemedText type="bold" style={styles.backButtonTextWhite}>
-              Go Back
+              Вернуться
             </ThemedText>
           </Pressable>
         </View>
@@ -100,9 +100,9 @@ export default function BirdDetailScreen() {
     return renderNotFound();
   }
 
-  const displayName = bird.common_name_en || bird.scientific_name || 'Unknown Bird';
+  const displayName = bird.common_name_ru || bird.common_name_en || bird.scientific_name || 'Неизвестная птица';
   const kazakhName = bird.common_name_kz;
-  const russianName = bird.common_name_ru;
+  const englishName = bird.common_name_en;
 
   return (
     <>
@@ -139,29 +139,29 @@ export default function BirdDetailScreen() {
             </View>
             
             {/* Multi-language names */}
-            {(kazakhName || russianName) && (
+            {(kazakhName || englishName) && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Alternative Names
+                  Альтернативные названия
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 {kazakhName && (
                   <View style={styles.nameRow}>
                     <ThemedText type="bold" style={styles.nameLabel}>
-                      Kazakh:
+                      Казахский:
                     </ThemedText>
                     <ThemedText type="default" style={styles.nameValue}>
                       {kazakhName}
                     </ThemedText>
                   </View>
                 )}
-                {russianName && (
+                {englishName && (
                   <View style={styles.nameRow}>
                     <ThemedText type="bold" style={styles.nameLabel}>
-                      Russian:
+                      Английский:
                     </ThemedText>
                     <ThemedText type="default" style={styles.nameValue}>
-                      {russianName}
+                      {englishName}
                     </ThemedText>
                   </View>
                 )}
@@ -172,13 +172,13 @@ export default function BirdDetailScreen() {
             {(bird.family || bird.order) && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Classification
+                  Классификация
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 {bird.family && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Family:
+                      Семейство:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.family}
@@ -188,7 +188,7 @@ export default function BirdDetailScreen() {
                 {bird.order && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Order:
+                      Отряд:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.order}
@@ -202,13 +202,13 @@ export default function BirdDetailScreen() {
             {(bird.size || bird.length_cm_min || bird.wingspan_cm_min || bird.weight_g_min) && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Physical Characteristics
+                  Физические характеристики
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 {bird.size && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Size:
+                      Размер:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.size}
@@ -218,7 +218,7 @@ export default function BirdDetailScreen() {
                 {(bird.length_cm_min || bird.length_cm_max) && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Length:
+                      Длина:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.length_cm_min}-{bird.length_cm_max} cm
@@ -228,7 +228,7 @@ export default function BirdDetailScreen() {
                 {(bird.wingspan_cm_min || bird.wingspan_cm_max) && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Wingspan:
+                      Размах крыльев:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.wingspan_cm_min}-{bird.wingspan_cm_max} cm
@@ -238,7 +238,7 @@ export default function BirdDetailScreen() {
                 {(bird.weight_g_min || bird.weight_g_max) && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Weight:
+                      Вес:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.weight_g_min}-{bird.weight_g_max} g
@@ -252,12 +252,12 @@ export default function BirdDetailScreen() {
             {bird.status_kz && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Status in Kazakhstan
+                  Статус в Казахстане
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 <View style={styles.infoRow}>
                   <ThemedText type="bold" style={styles.infoLabel}>
-                    Status:
+                    Статус:
                   </ThemedText>
                   <ThemedText type="default" style={[styles.infoValue, styles.conservationStatus]}>
                     {bird.status_kz}
@@ -270,13 +270,13 @@ export default function BirdDetailScreen() {
             {(bird.primary_colors || bird.body_type || bird.beak_type) && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Characteristics
+                  Характеристики
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 {bird.primary_colors && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Colors:
+                      Цвета:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.primary_colors}
@@ -286,7 +286,7 @@ export default function BirdDetailScreen() {
                 {bird.body_type && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Body Type:
+                      Тип тела:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.body_type}
@@ -296,7 +296,7 @@ export default function BirdDetailScreen() {
                 {bird.beak_type && (
                   <View style={styles.infoRow}>
                     <ThemedText type="bold" style={styles.infoLabel}>
-                      Beak Type:
+                      Тип клюва:
                     </ThemedText>
                     <ThemedText type="default" style={styles.infoValue}>
                       {bird.beak_type}
@@ -310,7 +310,7 @@ export default function BirdDetailScreen() {
             {bird.habitat && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Habitat
+                  Среда обитания
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 <ThemedText type="default" style={styles.habitatText}>
@@ -323,7 +323,7 @@ export default function BirdDetailScreen() {
             {bird.notes && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Notes
+                  Заметки
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 <ThemedText type="default" style={styles.descriptionText}>
@@ -336,7 +336,7 @@ export default function BirdDetailScreen() {
             {bird.subspecies_in_kz && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Subspecies in Kazakhstan
+                  Подвиды в Казахстане
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 <ThemedText type="default" style={styles.descriptionText}>
@@ -440,8 +440,9 @@ const styles = StyleSheet.create({
     borderLeftColor: Colors.light.primary,
   },
   nameLabel: { 
-    width: 80,
+    width: 110,
     color: Colors.light.textSecondary,
+    flexShrink: 0,
   },
   nameValue: { 
     flex: 1,

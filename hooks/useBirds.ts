@@ -1,4 +1,5 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
+import { batchGenerateBirdImageUrls, generateBirdImageUrls } from '../lib/imageUtils';
 import { supabase } from '../lib/supabaseClient';
 import type { Bird, BirdListItem, BirdSearchFilters } from '../types/bird';
 
@@ -94,5 +95,45 @@ export const useBird = (id: string): UseQueryResult<Bird | null, Error> => {
     enabled: !!id,
     staleTime: 1000 * 60 * 60, // 1 hour cache
     gcTime: 1000 * 60 * 60 * 2, // 2 hours garbage collection
+  });
+};
+
+/**
+ * React Query hook for caching bird image URLs
+ * @param birdId - Bird ID
+ * @param scientificName - Scientific name for URL generation
+ * @returns UseQueryResult with cached image URLs
+ */
+export const useBirdImageUrls = (
+  birdId: string, 
+  scientificName?: string | null
+): UseQueryResult<string[], Error> => {
+  return useQuery({
+    queryKey: ['bird-image-urls', birdId, scientificName],
+    queryFn: () => generateBirdImageUrls(birdId, scientificName),
+    enabled: !!birdId,
+    staleTime: 45 * 60 * 1000, // 45 minutes (5min buffer before signed URL expiry)
+    gcTime: 55 * 60 * 1000, // 55 minutes garbage collection
+    retry: 2,
+    retryDelay: 1000,
+  });
+};
+
+/**
+ * React Query hook for batch caching multiple bird image URLs
+ * @param birds - Array of birds to get URLs for
+ * @returns UseQueryResult with map of bird IDs to image URLs
+ */
+export const useBatchBirdImageUrls = (
+  birds: Array<{ id: string; scientific_name?: string | null }>
+): UseQueryResult<Map<string, string[]>, Error> => {
+  return useQuery({
+    queryKey: ['batch-bird-image-urls', birds.map(b => b.id).sort()],
+    queryFn: () => batchGenerateBirdImageUrls(birds),
+    enabled: birds.length > 0,
+    staleTime: 45 * 60 * 1000,
+    gcTime: 55 * 60 * 1000,
+    retry: 2,
+    retryDelay: 1000,
   });
 }; 

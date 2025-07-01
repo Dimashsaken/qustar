@@ -8,12 +8,13 @@ import { BirdImage } from './BirdImage';
 interface BirdCardProps {
   bird: BirdListItem;
   variant?: 'list' | 'grid';
+  imagePriority?: 'high' | 'normal' | 'low';
   onPress?: () => void;
 }
 
 // Get screen dimensions for grid calculations
 const { width: screenWidth } = Dimensions.get('window');
-const gridItemWidth = (screenWidth - 24) / 2 - 4;
+const gridItemWidth = (screenWidth - 32) / 2 - 8;
 
 /**
  * Bird card component for list or grid view display
@@ -21,10 +22,16 @@ const gridItemWidth = (screenWidth - 24) / 2 - 4;
  * Shows essential bird information with navigation to detail screen
  * @param bird - Bird data to display
  * @param variant - Display variant: 'list' or 'grid'
+ * @param imagePriority - Image priority: 'high', 'normal', or 'low'
  * @param onPress - Optional custom press handler
  * @returns JSX.Element - Pressable bird card component
  */
-export const BirdCard: React.FC<BirdCardProps> = ({ bird, variant = 'list', onPress }) => {
+export const BirdCard: React.FC<BirdCardProps> = React.memo(({
+  bird,
+  variant = 'list',
+  imagePriority = 'normal',
+  onPress
+}) => {
   const animatedValue = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -51,12 +58,10 @@ export const BirdCard: React.FC<BirdCardProps> = ({ bird, variant = 'list', onPr
     }
   };
 
-  const displayName = bird.common_name_en || bird.scientific_name || 'Unknown Bird';
+  const displayName = bird.common_name_ru || bird.common_name_en || bird.scientific_name || 'Неизвестная птица';
   const kazakhName = bird.common_name_kz;
   const family = bird.family;
   const size = bird.size;
-  const colors = bird.primary_colors;
-  const status = bird.status_kz;
 
   const isGrid = variant === 'grid';
   const containerStyle = isGrid ? [styles.container, styles.gridContainer] : styles.container;
@@ -70,6 +75,9 @@ export const BirdCard: React.FC<BirdCardProps> = ({ bird, variant = 'list', onPr
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Открыть информацию о птице ${bird.common_name_ru || bird.common_name_en}`}
       >
         <View style={contentStyle}>
           <View style={isGrid ? styles.gridImageContainer : styles.imageContainer}>
@@ -77,6 +85,8 @@ export const BirdCard: React.FC<BirdCardProps> = ({ bird, variant = 'list', onPr
               birdId={bird.id} 
               scientificName={bird.scientific_name}
               size={imageSize} 
+              priority={imagePriority}
+              style={isGrid ? styles.gridImage : styles.image}
             />
           </View>
           
@@ -105,27 +115,12 @@ export const BirdCard: React.FC<BirdCardProps> = ({ bird, variant = 'list', onPr
                 )}
               </View>
             )}
-            
-            {(colors || status) && (
-              <View style={styles.tagsRow}>
-                {colors && (
-                  <Text style={styles.tag} numberOfLines={1}>
-                    {colors}
-                  </Text>
-                )}
-                {status && (
-                  <Text style={[styles.tag, styles.statusTag]} numberOfLines={1}>
-                    {status}
-                  </Text>
-                )}
-              </View>
-            )}
           </View>
         </View>
       </Pressable>
     </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -137,8 +132,8 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     width: gridItemWidth,
-    marginHorizontal: 2,
-    marginVertical: 2,
+    marginHorizontal: DesignTokens.spacing.xs,
+    marginVertical: DesignTokens.spacing.xs,
   },
   listContent: {
     flexDirection: 'row',
@@ -147,8 +142,9 @@ const styles = StyleSheet.create({
   },
   gridContent: {
     flexDirection: 'column',
-    padding: DesignTokens.spacing.lg,
+    padding: DesignTokens.spacing.md,
     alignItems: 'center',
+    minHeight: 180,
   },
   imageContainer: {
     marginRight: DesignTokens.spacing.md,
@@ -193,25 +189,12 @@ const styles = StyleSheet.create({
   size: {
     fontWeight: '500',
   },
-  tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+  gridImage: {
+    width: 80,
+    height: 80,
   },
-  tag: {
-    fontSize: 10,
-    backgroundColor: Colors.light.primaryAlt + '20', // Sky blue with 20% opacity
-    color: Colors.light.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: DesignTokens.borderRadius.button,
-    marginRight: 4,
-    marginTop: 2,
-    fontFamily: 'SF Pro Display',
-    fontWeight: '500',
-  },
-  statusTag: {
-    backgroundColor: Colors.light.accent + '20', // Soft sun with 20% opacity
-    color: Colors.light.accentAlt,
+  image: {
+    width: 64,
+    height: 64,
   },
 }); 

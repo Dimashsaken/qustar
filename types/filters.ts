@@ -6,6 +6,7 @@
  * Расширенные фильтры поиска птиц
  */
 export interface BirdSearchFilters {
+  searchText?: string;
   family?: string;
   size?: string;
   status?: string;
