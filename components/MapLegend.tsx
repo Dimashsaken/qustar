@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { DesignTokens } from '../constants/Colors';
 
 interface MapLegendProps {
@@ -15,19 +16,68 @@ interface MapLegendProps {
  * @returns JSX.Element - Map legend bottom sheet component
  */
 export const MapLegend: React.FC<MapLegendProps> = ({ visible, onClose }) => {
+  // Animation values
+  const backgroundOpacity = useSharedValue(0);
+  const bottomSheetTranslateY = useSharedValue(500);
+
+  /**
+   * Handle animation when visibility changes
+   */
+  useEffect(() => {
+    if (visible) {
+      // Fade in background
+      backgroundOpacity.value = withTiming(1, { duration: 300 });
+      // Slide up bottom sheet
+      bottomSheetTranslateY.value = withSpring(0, {
+        damping: 15,
+        stiffness: 150,
+      });
+    } else {
+      // Fade out background
+      backgroundOpacity.value = withTiming(0, { duration: 200 });
+      // Slide down bottom sheet
+      bottomSheetTranslateY.value = withSpring(500, {
+        damping: 20,
+        stiffness: 200,
+      });
+    }
+  }, [visible]);
+
+  /**
+   * Animated style for background opacity
+   */
+  const backgroundAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: backgroundOpacity.value,
+    };
+  });
+
+  /**
+   * Animated style for bottom sheet slide up
+   */
+  const bottomSheetAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateY: bottomSheetTranslateY.value },
+      ],
+    };
+  });
+
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none" // Disable default animation
       transparent={true}
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        {/* Invisible background area - tapping closes the modal */}
-        <Pressable style={styles.backgroundArea} onPress={onClose} />
+        {/* Animated background area */}
+        <Animated.View style={[styles.backgroundArea, backgroundAnimatedStyle]}>
+          <Pressable style={styles.backgroundPressable} onPress={onClose} />
+        </Animated.View>
         
-        {/* Bottom sheet content */}
-        <View style={styles.bottomSheet}>
+        {/* Animated bottom sheet content */}
+        <Animated.View style={[styles.bottomSheet, bottomSheetAnimatedStyle]}>
           {/* Drag handle */}
           <View style={styles.dragHandle} />
           
@@ -95,7 +145,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({ visible, onClose }) => {
               </Text>
             </View>
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -141,13 +191,21 @@ const LegendItem: React.FC<LegendItemProps> = ({ color, pattern, patternColor, s
 );
 
 const styles = StyleSheet.create({
-  // Overlay and bottom sheet
+  // Overlay and bottom sheet with separate animations
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'transparent', // Remove background color since it's animated separately
     justifyContent: 'flex-end',
   },
   backgroundArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Moved background color here
+  },
+  backgroundPressable: {
     flex: 1,
   },
   bottomSheet: {

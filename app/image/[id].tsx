@@ -1,33 +1,48 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, Dimensions, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { MapLegend } from '../../components/MapLegend';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { ThemedText } from '../../components/ThemedText';
 import { Colors, DesignTokens } from '../../constants/Colors';
-import { useBird, useBirdMapUrl } from '../../hooks/useBirds';
+import { useBird, useBirdImageUrls } from '../../hooks/useBirds';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 /**
- * Full-screen interactive map screen with zoom functionality
- * Displays bird migration/habitat maps with pinch-to-zoom
- * @returns JSX.Element - Interactive map screen component
+ * Full-screen interactive bird image screen with zoom functionality
+ * Displays bird photos with pinch-to-zoom capability
+ * @returns JSX.Element - Interactive image screen component
  */
-export default function BirdMapScreen() {
+export default function BirdImageScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: bird } = useBird(id || '');
-  const { data: mapUrl, isLoading, error } = useBirdMapUrl(id || '', bird?.scientific_name);
-  
-  // State for legend modal
-  const [showLegend, setShowLegend] = useState(false);
+  const { data: imageUrls = [], isLoading, error } = useBirdImageUrls(id || '', bird?.scientific_name);
   
   // Animation values for zoom
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
+  
+  // Animation values for instructions overlay
+  const backgroundOpacity = useSharedValue(0);
+  const contentTranslateY = useSharedValue(50);
+
+  /**
+   * Start animations when component mounts and image is loaded
+   */
+  useEffect(() => {
+    if (imageUrls[0] && !isLoading && !error) {
+      // Fade in background
+      backgroundOpacity.value = withTiming(1, { duration: 400 });
+      // Slide up content
+      contentTranslateY.value = withSpring(0, { 
+        damping: 15,
+        stiffness: 150 
+      });
+    }
+  }, [imageUrls, isLoading, error]);
 
   /**
    * Handles pinch gesture for zooming
@@ -35,7 +50,7 @@ export default function BirdMapScreen() {
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
       scale.value = savedScale.value * event.scale;
-      scale.value = Math.max(1, Math.min(3, scale.value));
+      scale.value = Math.max(1, Math.min(4, scale.value));
     })
     .onEnd(() => {
       savedScale.value = scale.value;
@@ -56,14 +71,25 @@ export default function BirdMapScreen() {
     };
   });
 
-
+  /**
+   * Animated style for background opacity
+   */
+  const backgroundAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: backgroundOpacity.value,
+    };
+  });
 
   /**
-   * Shows the map legend tutorial
+   * Animated style for content slide up
    */
-  const handleShowLegend = () => {
-    setShowLegend(true);
-  };
+  const contentAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateY: contentTranslateY.value },
+      ],
+    };
+  });
 
   /**
    * Renders loading state
@@ -72,7 +98,7 @@ export default function BirdMapScreen() {
     <View style={styles.centerContainer}>
       <ActivityIndicator size="large" color={Colors.light.primary} />
       <ThemedText type="default" style={styles.loadingText}>
-        Загрузка карты...
+        Загрузка изображения...
       </ThemedText>
     </View>
   );
@@ -82,12 +108,12 @@ export default function BirdMapScreen() {
    */
   const renderError = () => (
     <View style={styles.centerContainer}>
-      <Text style={styles.errorIcon}>🗺️</Text>
+      <Text style={styles.errorIcon}>🐦</Text>
       <ThemedText type="title" style={styles.errorText}>
-        Карта недоступна
+        Изображение недоступно
       </ThemedText>
       <ThemedText type="default" style={styles.errorSubtext}>
-        Карта для этой птицы не найдена или недоступна
+        Изображение для этой птицы не найдено или недоступно
       </ThemedText>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
         <ThemedText type="bold" style={styles.backButtonTextWhite}>
@@ -97,13 +123,14 @@ export default function BirdMapScreen() {
     </View>
   );
 
-  const displayName = bird?.common_name_ru || bird?.common_name_en || bird?.scientific_name || 'Карта птицы';
+  const displayName = bird?.common_name_ru || bird?.common_name_en || bird?.scientific_name || 'Фото птицы';
+  const primaryImageUrl = imageUrls[0];
 
   return (
     <>
       <StatusBar style="light" backgroundColor="black" translucent />
       <SafeAreaView style={styles.safeArea}>
-        {/* Header with back button, title, and help button */}
+        {/* Header with back button and title */}
         <View style={styles.header}>
           <Pressable style={styles.headerBackButton} onPress={() => router.back()}>
             <Text style={styles.backIcon}>←</Text>
@@ -114,56 +141,33 @@ export default function BirdMapScreen() {
               {displayName}
             </ThemedText>
             <ThemedText type="caption" style={styles.headerSubtitle}>
-              Карта ареала и миграции
+              Фотография птицы
             </ThemedText>
           </View>
 
-          <View style={styles.headerActions}>
-            {mapUrl && Platform.OS === 'ios' && (
-              <Pressable style={styles.actionButton} onPress={handleShowLegend}>
-                <Text style={styles.helpIcon}>❓</Text>
-              </Pressable>
-            )}
-          </View>
+          <View style={styles.headerSpacer} />
         </View>
 
-        {/* Map content */}
-        <View style={styles.mapContainer}>
+        {/* Image content */}
+        <View style={styles.imageContainer}>
           {isLoading && renderLoading()}
-          {(error || !mapUrl) && renderError()}
+          {(error || !primaryImageUrl) && renderError()}
           
-          {mapUrl && (
+          {primaryImageUrl && (
             <GestureDetector gesture={pinchGesture}>
-              <Animated.View style={[styles.imageContainer, animatedStyle]}>
+              <Animated.View style={[styles.animatedContainer, animatedStyle]}>
                 <Image 
-                  source={{ uri: mapUrl }}
-                  style={styles.mapImage}
+                  source={{ uri: primaryImageUrl }}
+                  style={styles.fullImage}
                   contentFit="contain"
+                  placeholder="🐦"
+                  transition={200}
                 />
               </Animated.View>
             </GestureDetector>
           )}
         </View>
 
-        {/* Instructions overlay */}
-        {mapUrl && Platform.OS === 'ios' && (
-          <View style={styles.instructionsOverlay}>
-
-            <Pressable onPress={handleShowLegend}>
-              <ThemedText type="caption" style={[styles.instructionsText, styles.helpLink]}>
-                • Нажмите ❓ для справочника по карте
-              </ThemedText>
-            </Pressable>
-          </View>
-        )}
-
-        {/* Map Legend Modal - Only on iOS */}
-        {Platform.OS === 'ios' && (
-          <MapLegend 
-            visible={showLegend}
-            onClose={() => setShowLegend(false)}
-          />
-        )}
       </SafeAreaView>
     </>
   );
@@ -212,34 +216,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 2,
   },
-  headerActions: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.sm,
-  },
-  actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  helpIcon: {
-    fontSize: 16,
-    color: 'white',
+  headerSpacer: {
+    width: 40, // Same width as back button for balance
   },
   
-  // Map container
-  mapContainer: {
+  // Image container
+  imageContainer: {
     flex: 1,
     backgroundColor: 'black',
   },
-  imageContainer: {
+  animatedContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  mapImage: {
+  fullImage: {
     width: screenWidth,
     height: screenHeight - 150, // Account for header and safe area
   },
@@ -281,22 +272,36 @@ const styles = StyleSheet.create({
   },
   
   // Instructions overlay
-  instructionsOverlay: {
+  instructionsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: screenHeight * 0.3, // Adjust height as needed
+    backgroundColor: 'transparent', // Make background transparent
+    justifyContent: 'flex-end', // Align content to the bottom
+  },
+  instructionsBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderBottomLeftRadius: DesignTokens.borderRadius.card,
+    borderBottomRightRadius: DesignTokens.borderRadius.card,
+  },
+  instructionsContent: {
     position: 'absolute',
     bottom: DesignTokens.spacing.lg,
     left: DesignTokens.spacing.lg,
     right: DesignTokens.spacing.lg,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    padding: DesignTokens.spacing.md,
+    backgroundColor: 'transparent', // Make content transparent
     borderRadius: DesignTokens.borderRadius.card,
-    gap: DesignTokens.spacing.xs,
+    padding: DesignTokens.spacing.md,
   },
   instructionsText: {
     color: 'white',
     textAlign: 'center',
-  },
-  helpLink: {
-    color: Colors.light.primary,
-    textDecorationLine: 'underline',
   },
 }); 

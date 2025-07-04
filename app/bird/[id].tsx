@@ -178,6 +178,16 @@ export default function BirdDetailScreen() {
             <Pressable style={styles.backButtonOverlay} onPress={() => router.back()}>
               <Text style={styles.backButtonIcon}>←</Text>
             </Pressable>
+            
+            {/* Fullscreen image button */}
+            <Pressable 
+              style={styles.fullscreenButtonOverlay} 
+              onPress={() => router.push(`/image/${bird.id}` as any)}
+              accessibilityLabel="Открыть изображение в полный экран"
+              accessibilityRole="button"
+            >
+              <Text style={styles.fullscreenButtonIcon}>⤢</Text>
+            </Pressable>
           </View>
           
           {/* Content card with elevation and rounded corners */}
@@ -348,45 +358,7 @@ export default function BirdDetailScreen() {
               </View>
             )}
 
-            {/* Additional characteristics */}
-            {(bird.primary_colors || bird.body_type || bird.beak_type) && (
-              <View style={styles.sectionCard}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Характеристики
-                </ThemedText>
-                <View style={styles.sectionDivider} />
-                {bird.primary_colors && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Цвета:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.primary_colors}
-                    </ThemedText>
-                  </View>
-                )}
-                {bird.body_type && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Тип тела:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.body_type}
-                    </ThemedText>
-                  </View>
-                )}
-                {bird.beak_type && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Тип клюва:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.beak_type}
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
-            )}
+
 
             {/* Habitat information */}
             {bird.habitat && (
@@ -474,6 +446,39 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  
+  fullscreenButtonOverlay: {
+    position: 'absolute',
+    top: DesignTokens.spacing.lg,
+    right: DesignTokens.spacing.lg,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(128, 128, 128, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    ...DesignTokens.shadows.card,
+    zIndex: 3,
+    // Add stronger shadow for better visibility
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  fullscreenButtonIcon: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   
   // Video button

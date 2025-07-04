@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
@@ -29,14 +29,29 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const [splashTimerComplete, setSplashTimerComplete] = useState(false);
+  const [appReady, setAppReady] = useState(false);
 
+  // 3-second splash screen timer
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    const timer = setTimeout(() => {
+      setSplashTimerComplete(true);
+    }, 3000);
 
-  if (!loaded) {
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Hide splash screen when fonts are loaded AND timer is complete
+  useEffect(() => {
+    if (loaded && splashTimerComplete) {
+      SplashScreen.hideAsync().then(() => {
+        setAppReady(true);
+      });
+    }
+  }, [loaded, splashTimerComplete]);
+
+  // Don't render the app until splash screen sequence is complete
+  if (!appReady) {
     return null;
   }
 
@@ -48,6 +63,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="bird/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="map/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="image/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="results" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
