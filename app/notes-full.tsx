@@ -1,5 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { router, Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -137,6 +138,7 @@ export default function NotesFullScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
       <SafeAreaView style={styles.safeArea}>
         {renderHeader()}
         

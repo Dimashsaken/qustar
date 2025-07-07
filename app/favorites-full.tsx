@@ -1,5 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import {
@@ -147,6 +147,7 @@ export default function FavoritesFullScreen() {
 
   return (
     <>
+      <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="dark" backgroundColor="transparent" translucent />
       <SafeAreaView style={styles.safeArea}>
         {renderHeader()}
