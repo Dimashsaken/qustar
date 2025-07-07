@@ -1,0 +1,11 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacks]
+providers = ["node"]
+
+[build.nixpacks.build]
+cmds = ["npm ci", "npm run build:web"]
+
+[deploy]
+startCommand = "npx serve dist --single --listen 3000" 

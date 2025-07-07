@@ -1,0 +1,5 @@
+supabase/
+.env*
+node_modules/
+.expo/
+.git/ 
