@@ -1,0 +1,18 @@
+# Force Nixpacks to use only the Node provider to prevent accidental Deno detection
+providers = ["node"]
+
+# Environment variables
+[variables]
+PORT = "8080"  # Railway will override this at runtime
+
+# Installation phase – rely on default Node provider install but ensure clean install
+[phases.install]
+cmds = ["npm ci"]
+
+# Build phase – generate static web output using Expo export
+[phases.build]
+cmds = ["EXPO_NO_CACHE=1 NODE_ENV=production npm run build:web"]
+
+# Start phase – serve the static build
+[start]
+cmd = "npx serve -s dist -l $PORT" 
