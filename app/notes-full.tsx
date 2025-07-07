@@ -3,13 +3,13 @@ import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  StatusBar as RNStatusBar,
-  SafeAreaView,
-  StyleSheet,
-  View
+    ActivityIndicator,
+    Platform,
+    Pressable,
+    StatusBar as RNStatusBar,
+    SafeAreaView,
+    StyleSheet,
+    View
 } from 'react-native';
 import { ThemedText } from '../components/ThemedText';
 import { ThemedView } from '../components/ThemedView';
@@ -57,19 +57,19 @@ export default function NotesFullScreen() {
    * Renders loading state
    */
   const renderLoading = () => (
-    <ThemedView style={styles.centerContainer}>
+    <View style={styles.centerContainer}>
       <ActivityIndicator size="large" color={Colors.light.accent} />
       <ThemedText type="default" style={styles.loadingText}>
         Загрузка заметок...
       </ThemedText>
-    </ThemedView>
+    </View>
   );
 
   /**
    * Renders error state
    */
   const renderError = () => (
-    <ThemedView style={styles.centerContainer}>
+    <View style={styles.centerContainer}>
       <ThemedText type="title" style={styles.errorText}>
         Ошибка загрузки
       </ThemedText>
@@ -81,14 +81,14 @@ export default function NotesFullScreen() {
           Попробовать снова
         </ThemedText>
       </Pressable>
-    </ThemedView>
+    </View>
   );
 
   /**
    * Renders empty notes state
    */
   const renderEmpty = () => (
-    <ThemedView style={styles.centerContainer}>
+    <View style={styles.centerContainer}>
       <View style={styles.emptyState}>
         <IconSymbol name="note.text" size={64} color={Colors.light.textMuted} />
         <ThemedText type="title" style={styles.emptyTitle}>
@@ -106,7 +106,7 @@ export default function NotesFullScreen() {
           </ThemedText>
         </Pressable>
       </View>
-    </ThemedView>
+    </View>
   );
 
   /**
@@ -215,6 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: DesignTokens.spacing.xl,
+    backgroundColor: Colors.light.background,
   },
 
   // Loading state

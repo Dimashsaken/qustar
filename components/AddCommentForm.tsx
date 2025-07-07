@@ -5,7 +5,6 @@ import {
     Keyboard,
     Platform,
     Pressable,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -37,7 +36,6 @@ export const AddCommentForm: React.FC<AddCommentFormProps> = ({
   
   const [comment, setComment] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
   const maxLength = 500;
@@ -96,14 +94,10 @@ export const AddCommentForm: React.FC<AddCommentFormProps> = ({
   const handleFocus = () => {
     setIsExpanded(true);
     
-    // Scroll to input with delay to ensure layout is updated
+    // Enhanced focus handling for better keyboard avoidance
     setTimeout(() => {
-      if (Platform.OS === 'ios') {
-        inputRef.current?.focus();
-      }
-      // Scroll the input into view
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 300);
+      inputRef.current?.focus();
+    }, 100);
   };
 
   if (!isAuthenticated) {
@@ -117,84 +111,74 @@ export const AddCommentForm: React.FC<AddCommentFormProps> = ({
   }
 
   return (
-    <ScrollView
-      ref={scrollViewRef}
-      style={styles.scrollContainer}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <ThemedView style={styles.container}>
-        {/* Comment input */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            ref={inputRef}
-            style={[
-              styles.input,
-              isExpanded && styles.inputExpanded,
-              comment.length > 0 && styles.inputWithContent,
-            ]}
-            value={comment}
-            onChangeText={setComment}
-            placeholder="Добавьте свои наблюдения и мысли об этой птице..."
-            placeholderTextColor={Colors.light.textMuted}
-            multiline
-            maxLength={maxLength}
-            onFocus={handleFocus}
-            scrollEnabled={isExpanded}
-            textAlignVertical="top"
-            blurOnSubmit={false}
-            returnKeyType="default"
-          />
-          
-          {/* Character counter */}
-          {isExpanded && (
-            <Text style={[
-              styles.charCounter,
-              remainingChars < 50 && styles.charCounterWarning,
-              remainingChars < 20 && styles.charCounterDanger,
-            ]}>
-              {remainingChars} символов осталось
-            </Text>
-          )}
-        </View>
-
-        {/* Action buttons */}
+    <ThemedView style={styles.container}>
+      {/* Comment input */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          ref={inputRef}
+          style={[
+            styles.input,
+            isExpanded && styles.inputExpanded,
+            comment.length > 0 && styles.inputWithContent,
+          ]}
+          value={comment}
+          onChangeText={setComment}
+          placeholder="Добавьте свои наблюдения и мысли об этой птице..."
+          placeholderTextColor={Colors.light.textMuted}
+          multiline
+          maxLength={maxLength}
+          onFocus={handleFocus}
+          scrollEnabled={isExpanded}
+          textAlignVertical="top"
+          blurOnSubmit={false}
+          returnKeyType="default"
+        />
+        
+        {/* Character counter */}
         {isExpanded && (
-          <View style={styles.actions}>
-            <Pressable
-              style={[styles.actionButton, styles.cancelButton]}
-              onPress={handleCancel}
-              disabled={isPending}
-            >
-              <Text style={styles.cancelButtonText}>Отмена</Text>
-            </Pressable>
-            
-            <Pressable
-              style={[
-                styles.actionButton,
-                styles.submitButton,
-                (comment.trim().length < 3 || isPending) && styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={comment.trim().length < 3 || isPending}
-            >
-              {isPending ? (
-                <ActivityIndicator size="small" color={Colors.light.surface} />
-              ) : (
-                <Text style={styles.submitButtonText}>Сохранить</Text>
-              )}
-            </Pressable>
-          </View>
+          <Text style={[
+            styles.charCounter,
+            remainingChars < 50 && styles.charCounterWarning,
+            remainingChars < 20 && styles.charCounterDanger,
+          ]}>
+            {remainingChars} символов осталось
+          </Text>
         )}
-      </ThemedView>
-    </ScrollView>
+      </View>
+
+      {/* Action buttons */}
+      {isExpanded && (
+        <View style={styles.actions}>
+          <Pressable
+            style={[styles.actionButton, styles.cancelButton]}
+            onPress={handleCancel}
+            disabled={isPending}
+          >
+            <Text style={styles.cancelButtonText}>Отмена</Text>
+          </Pressable>
+          
+          <Pressable
+            style={[
+              styles.actionButton,
+              styles.submitButton,
+              (comment.trim().length < 3 || isPending) && styles.submitButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={comment.trim().length < 3 || isPending}
+          >
+            {isPending ? (
+              <ActivityIndicator size="small" color={Colors.light.surface} />
+            ) : (
+              <Text style={styles.submitButtonText}>Сохранить</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+    </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-  },
   container: {
     backgroundColor: Colors.light.surface,
     borderRadius: DesignTokens.borderRadius.card,

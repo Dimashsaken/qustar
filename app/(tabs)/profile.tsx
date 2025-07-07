@@ -119,20 +119,25 @@ export default function ProfileScreen() {
 
     return (
       <ThemedView style={styles.section}>
-        <Pressable style={styles.sectionHeader} onPress={handleFavoritesPress}>
+        <Pressable style={styles.sectionHeaderClickable} onPress={handleFavoritesPress}>
           <View style={styles.sectionTitleRow}>
-            <IconSymbol 
-              name="heart.fill" 
-              size={20} 
-              color={Colors.light.primary} 
-            />
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Избранные птицы
-            </ThemedText>
-            <View style={styles.badge}>
-              <ThemedText type="default" style={styles.badgeText}>
-                {favoritesCount}
+            <View style={styles.iconContainer}>
+              <IconSymbol 
+                name="heart.fill" 
+                size={22} 
+                color={Colors.light.surface} 
+              />
+            </View>
+            <View style={styles.sectionContent}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Избранные птицы
               </ThemedText>
+              <ThemedText type="default" style={styles.sectionSubtitle}>
+                {favoritesCount > 0 ? `${favoritesCount} птиц в избранном` : 'Нет избранных птиц'}
+              </ThemedText>
+            </View>
+            <View style={styles.arrowContainer}>
+              <IconSymbol name="chevron.right" size={20} color={Colors.light.primary} />
             </View>
           </View>
         </Pressable>
@@ -151,24 +156,6 @@ export default function ProfileScreen() {
             Ошибка загрузки избранного
           </ThemedText>
         )}
-
-        {!favoritesLoading && !favoritesError && favoritesCount === 0 && (
-          <ThemedText type="default" style={styles.emptyText}>
-            Нет избранных птиц
-          </ThemedText>
-        )}
-
-        {!favoritesLoading && !favoritesError && favoritesCount > 0 && (
-          <Pressable 
-            style={styles.viewAllButton}
-            onPress={handleFavoritesPress}
-          >
-            <ThemedText type="default" style={styles.viewAllText}>
-              Показать все ({favoritesCount})
-            </ThemedText>
-            <IconSymbol name="arrow.right" size={16} color={Colors.light.primary} />
-          </Pressable>
-        )}
       </ThemedView>
     );
   };
@@ -180,20 +167,25 @@ export default function ProfileScreen() {
 
     return (
       <ThemedView style={styles.section}>
-        <Pressable style={styles.sectionHeader} onPress={handleNotesPress}>
+        <Pressable style={styles.sectionHeaderClickable} onPress={handleNotesPress}>
           <View style={styles.sectionTitleRow}>
-            <IconSymbol 
-              name="note.text" 
-              size={20} 
-              color={Colors.light.accent} 
-            />
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Мои заметки
-            </ThemedText>
-            <View style={[styles.badge, { backgroundColor: Colors.light.accent }]}>
-              <ThemedText type="default" style={styles.badgeText}>
-                {notesCount}
+            <View style={[styles.iconContainer, { backgroundColor: Colors.light.accent }]}>
+              <IconSymbol 
+                name="note.text" 
+                size={22} 
+                color={Colors.light.surface} 
+              />
+            </View>
+            <View style={styles.sectionContent}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Мои заметки
               </ThemedText>
+              <ThemedText type="default" style={styles.sectionSubtitle}>
+                {notesCount > 0 ? `${notesCount} заметок о птицах` : 'У вас пока нет заметок'}
+              </ThemedText>
+            </View>
+            <View style={styles.arrowContainer}>
+              <IconSymbol name="chevron.right" size={20} color={Colors.light.accent} />
             </View>
           </View>
         </Pressable>
@@ -211,24 +203,6 @@ export default function ProfileScreen() {
           <ThemedText type="default" style={styles.errorText}>
             Ошибка загрузки заметок
           </ThemedText>
-        )}
-
-        {!notesLoading && !notesError && notesCount === 0 && (
-          <ThemedText type="default" style={styles.emptyText}>
-            У вас пока нет заметок о птицах
-          </ThemedText>
-        )}
-
-        {!notesLoading && !notesError && notesCount > 0 && (
-          <Pressable 
-            style={styles.viewAllButton}
-            onPress={() => router.push('/notes-full' as any)}
-          >
-            <ThemedText type="default" style={[styles.viewAllText, { color: Colors.light.accent }]}>
-              Показать все заметки ({notesCount})
-            </ThemedText>
-            <IconSymbol name="arrow.right" size={16} color={Colors.light.accent} />
-          </Pressable>
         )}
       </ThemedView>
     );
@@ -326,6 +300,12 @@ const styles = StyleSheet.create({
     marginTop: DesignTokens.spacing.sm,
     paddingBottom: DesignTokens.spacing.md,
   },
+  sectionHeaderClickable: {
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingVertical: DesignTokens.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -343,6 +323,26 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: Colors.light.text,
     marginLeft: DesignTokens.spacing.sm,
+  },
+  sectionSubtitle: {
+    color: Colors.light.textMuted,
+    fontSize: 12,
+    marginTop: DesignTokens.spacing.xs,
+  },
+  sectionContent: {
+    flex: 1,
+  },
+  arrowContainer: {
+    paddingLeft: DesignTokens.spacing.sm,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.light.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: DesignTokens.spacing.sm,
   },
   badge: {
     backgroundColor: Colors.light.primary,
@@ -377,21 +377,6 @@ const styles = StyleSheet.create({
     color: Colors.light.textMuted,
     textAlign: 'center',
     paddingVertical: DesignTokens.spacing.lg,
-  },
-
-
-
-  // View all button
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: DesignTokens.spacing.md,
-    paddingHorizontal: DesignTokens.spacing.lg,
-  },
-  viewAllText: {
-    color: Colors.light.primary,
-    marginRight: DesignTokens.spacing.xs,
   },
 
 

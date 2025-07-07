@@ -19,7 +19,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-localization"
+      "expo-localization",
+      ["expo-audio", { "microphonePermission": "Allow QuStar to record birdsong for identification." }]
     ],
     "experiments": {
       "typedRoutes": true

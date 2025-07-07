@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ActivityIndicator, Alert, Dimensions, Linking, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, KeyboardAvoidingView, Linking, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BirdImage } from '../../components/BirdImage';
 import { BirdMap } from '../../components/BirdMap';
 import { CommentsList } from '../../components/CommentsList';
@@ -167,281 +167,292 @@ export default function BirdDetailScreen() {
     <>
       <StatusBar style="dark" backgroundColor="transparent" translucent />
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-          {/* Hero Image Section - 35% of screen */}
-          <View style={styles.heroContainer}>
-            <BirdImage 
-              birdId={bird.id} 
-              scientificName={bird.scientific_name}
-              size={screenWidth} 
-              style={styles.heroImage} 
-            />
+        <KeyboardAvoidingView 
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <ScrollView 
+            style={styles.container} 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* Hero Image Section - 35% of screen */}
+            <View style={styles.heroContainer}>
+              <BirdImage 
+                birdId={bird.id} 
+                scientificName={bird.scientific_name}
+                size={screenWidth} 
+                style={styles.heroImage} 
+              />
+              
+              {/* Back button with new design system */}
+              <Pressable style={styles.backButtonOverlay} onPress={() => router.back()}>
+                <Text style={styles.backButtonIcon}>←</Text>
+              </Pressable>
+              
+              {/* Fullscreen image button */}
+              <Pressable 
+                style={styles.fullscreenButtonOverlay} 
+                onPress={() => router.push(`/image/${bird.id}` as any)}
+                accessibilityLabel="Открыть изображение в полный экран"
+                accessibilityRole="button"
+              >
+                <Text style={styles.fullscreenButtonIcon}>⤢</Text>
+              </Pressable>
+            </View>
             
-            {/* Back button with new design system */}
-            <Pressable style={styles.backButtonOverlay} onPress={() => router.back()}>
-              <Text style={styles.backButtonIcon}>←</Text>
-            </Pressable>
-            
-            {/* Fullscreen image button */}
-            <Pressable 
-              style={styles.fullscreenButtonOverlay} 
-              onPress={() => router.push(`/image/${bird.id}` as any)}
-              accessibilityLabel="Открыть изображение в полный экран"
-              accessibilityRole="button"
-            >
-              <Text style={styles.fullscreenButtonIcon}>⤢</Text>
-            </Pressable>
-          </View>
-          
-          {/* Content card with elevation and rounded corners */}
-          <View style={styles.contentCard}>
-            {/* Bird name section at top of content */}
-            <View style={styles.titleSection}>
-              <View style={styles.titleContainer}>
-                <View style={styles.nameContainer}>
-                  <ThemedText type="heading" style={styles.mainTitle}>
-                    {displayName}
-                  </ThemedText>
-                  {bird.scientific_name && (
-                    <ThemedText type="default" style={styles.scientificName}>
-                      {bird.scientific_name}
+            {/* Content card with elevation and rounded corners */}
+            <View style={styles.contentCard}>
+              {/* Bird name section at top of content */}
+              <View style={styles.titleSection}>
+                <View style={styles.titleContainer}>
+                  <View style={styles.nameContainer}>
+                    <ThemedText type="heading" style={styles.mainTitle}>
+                      {displayName}
                     </ThemedText>
+                    {bird.scientific_name && (
+                      <ThemedText type="default" style={styles.scientificName}>
+                        {bird.scientific_name}
+                      </ThemedText>
+                    )}
+                  </View>
+                  
+                  {/* Video button next to name */}
+                  <Pressable 
+                    style={styles.videoButton} 
+                    onPress={() => handleVideoPress(bird)}
+                    accessibilityLabel="Открыть видео птицы на YouTube"
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.videoButtonIcon}>▶</Text>
+                  </Pressable>
+
+                                   {/* Favorite button */}
+                   <Pressable 
+                     style={styles.favoriteButton} 
+                     onPress={async () => {
+                       if (!isAuthenticated) {
+                         Alert.alert(
+                           'Вход в систему',
+                           'Для добавления птиц в избранное необходимо войти в систему',
+                           [
+                             { text: 'Отмена', style: 'cancel' },
+                             { text: 'Войти', onPress: () => {
+                               router.push('/(tabs)/favorites' as any);
+                             }},
+                           ]
+                         );
+                         return;
+                       }
+                       
+                       try {
+                         await toggleFavorite(bird);
+                       } catch (error) {
+                         Alert.alert('Ошибка', (error as Error).message);
+                       }
+                     }}
+                     disabled={isAdding || isRemoving}
+                     accessibilityLabel={isFavorite(bird.id) ? 'Удалить из избранного' : 'Добавить в избранное'}
+                     accessibilityRole="button"
+                   >
+                     <Text style={[
+                       styles.favoriteButtonIcon,
+                       (isAdding || isRemoving) && { opacity: 0.5 }
+                     ]}>
+                       {isFavorite(bird.id) ? '❤️' : '🤍'}
+                     </Text>
+                   </Pressable>
+                </View>
+              </View>
+              
+              {/* Migration & Habitat Map */}
+              <View style={styles.sectionCard}>
+                <ThemedText type="title" style={styles.sectionTitle}>
+                  Карта
+                </ThemedText>
+                <View style={styles.sectionDivider} />
+                <BirdMap 
+                  birdId={bird.id}
+                  scientificName={bird.scientific_name ?? undefined}
+                />
+              </View>
+              
+              {/* Multi-language names */}
+              {(kazakhName || englishName) && (
+                <View style={styles.sectionCard}>
+                  <ThemedText type="title" style={styles.sectionTitle}>
+                    Имена птицы
+                  </ThemedText>
+                  <View style={styles.sectionDivider} />
+                  {kazakhName && (
+                    <View style={styles.nameRow}>
+                      <ThemedText type="bold" style={styles.nameLabel}>
+                        Казахский:
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.nameValue}>
+                        {kazakhName}
+                      </ThemedText>
+                    </View>
+                  )}
+                  {englishName && (
+                    <View style={styles.nameRow}>
+                      <ThemedText type="bold" style={styles.nameLabel}>
+                        Английский:
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.nameValue}>
+                        {englishName}
+                      </ThemedText>
+                    </View>
                   )}
                 </View>
-                
-                {/* Video button next to name */}
-                <Pressable 
-                  style={styles.videoButton} 
-                  onPress={() => handleVideoPress(bird)}
-                  accessibilityLabel="Открыть видео птицы на YouTube"
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.videoButtonIcon}>▶</Text>
-                </Pressable>
-
-                                 {/* Favorite button */}
-                 <Pressable 
-                   style={styles.favoriteButton} 
-                   onPress={async () => {
-                     if (!isAuthenticated) {
-                       Alert.alert(
-                         'Вход в систему',
-                         'Для добавления птиц в избранное необходимо войти в систему',
-                         [
-                           { text: 'Отмена', style: 'cancel' },
-                           { text: 'Войти', onPress: () => {
-                             router.push('/(tabs)/favorites' as any);
-                           }},
-                         ]
-                       );
-                       return;
-                     }
-                     
-                     try {
-                       await toggleFavorite(bird);
-                     } catch (error) {
-                       Alert.alert('Ошибка', (error as Error).message);
-                     }
-                   }}
-                   disabled={isAdding || isRemoving}
-                   accessibilityLabel={isFavorite(bird.id) ? 'Удалить из избранного' : 'Добавить в избранное'}
-                   accessibilityRole="button"
-                 >
-                   <Text style={[
-                     styles.favoriteButtonIcon,
-                     (isAdding || isRemoving) && { opacity: 0.5 }
-                   ]}>
-                     {isFavorite(bird.id) ? '❤️' : '🤍'}
-                   </Text>
-                 </Pressable>
-              </View>
-            </View>
-            
-            {/* Migration & Habitat Map */}
-            <View style={styles.sectionCard}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Карта
-              </ThemedText>
-              <View style={styles.sectionDivider} />
-              <BirdMap 
-                birdId={bird.id}
-                scientificName={bird.scientific_name ?? undefined}
-              />
-            </View>
-            
-            {/* Multi-language names */}
-            {(kazakhName || englishName) && (
-              <View style={styles.sectionCard}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Имена птицы
-                </ThemedText>
-                <View style={styles.sectionDivider} />
-                {kazakhName && (
-                  <View style={styles.nameRow}>
-                    <ThemedText type="bold" style={styles.nameLabel}>
-                      Казахский:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.nameValue}>
-                      {kazakhName}
-                    </ThemedText>
-                  </View>
-                )}
-                {englishName && (
-                  <View style={styles.nameRow}>
-                    <ThemedText type="bold" style={styles.nameLabel}>
-                      Английский:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.nameValue}>
-                      {englishName}
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
-            )}
-            
-            {/* Classification */}
-            {(bird.family || bird.order) && (
-              <View style={styles.sectionCard}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Классификация
-                </ThemedText>
-                <View style={styles.sectionDivider} />
-                {bird.family && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Семейство:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.family}
-                    </ThemedText>
-                  </View>
-                )}
-                {bird.order && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Отряд:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.order}
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
-            )}
-            
-            {/* Physical characteristics */}
-            {(bird.size || bird.length_cm_min || bird.wingspan_cm_min || bird.weight_g_min) && (
-              <View style={styles.sectionCard}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Физические характеристики
-                </ThemedText>
-                <View style={styles.sectionDivider} />
-                {bird.size && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Размер:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.size}
-                    </ThemedText>
-                  </View>
-                )}
-                {(bird.length_cm_min || bird.length_cm_max) && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Длина:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.length_cm_min}-{bird.length_cm_max} cm
-                    </ThemedText>
-                  </View>
-                )}
-                {(bird.wingspan_cm_min || bird.wingspan_cm_max) && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Размах крыльев:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.wingspan_cm_min}-{bird.wingspan_cm_max} cm
-                    </ThemedText>
-                  </View>
-                )}
-                {(bird.weight_g_min || bird.weight_g_max) && (
-                  <View style={styles.infoRow}>
-                    <ThemedText type="bold" style={styles.infoLabel}>
-                      Вес:
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.infoValue}>
-                      {bird.weight_g_min}-{bird.weight_g_max} g
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* Status in Kazakhstan */}
-            {bird.status_kz && (
-              <View style={styles.sectionCard}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Статус в Казахстане
-                </ThemedText>
-                <View style={styles.sectionDivider} />
-                <View style={styles.infoRow}>
-                  <ThemedText type="bold" style={styles.infoLabel}>
-                    Статус:
+              )}
+              
+              {/* Classification */}
+              {(bird.family || bird.order) && (
+                <View style={styles.sectionCard}>
+                  <ThemedText type="title" style={styles.sectionTitle}>
+                    Классификация
                   </ThemedText>
-                  <ThemedText type="default" style={[styles.infoValue, styles.conservationStatus]}>
-                    {bird.status_kz}
+                  <View style={styles.sectionDivider} />
+                  {bird.family && (
+                    <View style={styles.infoRow}>
+                      <ThemedText type="bold" style={styles.infoLabel}>
+                        Семейство:
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.infoValue}>
+                        {bird.family}
+                      </ThemedText>
+                    </View>
+                  )}
+                  {bird.order && (
+                    <View style={styles.infoRow}>
+                      <ThemedText type="bold" style={styles.infoLabel}>
+                        Отряд:
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.infoValue}>
+                        {bird.order}
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              )}
+              
+              {/* Physical characteristics */}
+              {(bird.size || bird.length_cm_min || bird.wingspan_cm_min || bird.weight_g_min) && (
+                <View style={styles.sectionCard}>
+                  <ThemedText type="title" style={styles.sectionTitle}>
+                    Физические характеристики
+                  </ThemedText>
+                  <View style={styles.sectionDivider} />
+                  {bird.size && (
+                    <View style={styles.infoRow}>
+                      <ThemedText type="bold" style={styles.infoLabel}>
+                        Размер:
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.infoValue}>
+                        {bird.size}
+                      </ThemedText>
+                    </View>
+                  )}
+                  {(bird.length_cm_min || bird.length_cm_max) && (
+                    <View style={styles.infoRow}>
+                      <ThemedText type="bold" style={styles.infoLabel}>
+                        Длина:
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.infoValue}>
+                        {bird.length_cm_min}-{bird.length_cm_max} cm
+                      </ThemedText>
+                    </View>
+                  )}
+                  {(bird.wingspan_cm_min || bird.wingspan_cm_max) && (
+                    <View style={styles.infoRow}>
+                      <ThemedText type="bold" style={styles.infoLabel}>
+                        Размах крыльев:
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.infoValue}>
+                        {bird.wingspan_cm_min}-{bird.wingspan_cm_max} cm
+                      </ThemedText>
+                    </View>
+                  )}
+                  {(bird.weight_g_min || bird.weight_g_max) && (
+                    <View style={styles.infoRow}>
+                      <ThemedText type="bold" style={styles.infoLabel}>
+                        Вес:
+                      </ThemedText>
+                      <ThemedText type="default" style={styles.infoValue}>
+                        {bird.weight_g_min}-{bird.weight_g_max} g
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Status in Kazakhstan */}
+              {bird.status_kz && (
+                <View style={styles.sectionCard}>
+                  <ThemedText type="title" style={styles.sectionTitle}>
+                    Статус в Казахстане
+                  </ThemedText>
+                  <View style={styles.sectionDivider} />
+                  <View style={styles.infoRow}>
+                    <ThemedText type="bold" style={styles.infoLabel}>
+                      Статус:
+                    </ThemedText>
+                    <ThemedText type="default" style={[styles.infoValue, styles.conservationStatus]}>
+                      {bird.status_kz}
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
+
+
+
+              {/* Habitat information */}
+              {bird.habitat && (
+                <View style={styles.sectionCard}>
+                  <ThemedText type="title" style={styles.sectionTitle}>
+                    Среда обитания
+                  </ThemedText>
+                  <View style={styles.sectionDivider} />
+                  <ThemedText type="default" style={styles.habitatText}>
+                    {bird.habitat}
                   </ThemedText>
                 </View>
-              </View>
-            )}
+              )}
 
+              {/* Additional notes */}
+              {bird.notes_ru && (
+                <View style={styles.sectionCard}>
+                  <ThemedText type="title" style={styles.sectionTitle}>
+                    Заметки
+                  </ThemedText>
+                  <View style={styles.sectionDivider} />
+                  <ThemedText type="default" style={styles.descriptionText}>
+                    {bird.notes_ru}
+                  </ThemedText>
+                </View>
+              )}
 
+              {/* Subspecies in Kazakhstan */}
+              {bird.subspecies_in_kz && (
+                <View style={styles.sectionCard}>
+                  <ThemedText type="title" style={styles.sectionTitle}>
+                    Подвиды в Казахстане
+                  </ThemedText>
+                  <View style={styles.sectionDivider} />
+                  <ThemedText type="default" style={styles.descriptionText}>
+                    {bird.subspecies_in_kz}
+                  </ThemedText>
+                </View>
+              )}
 
-            {/* Habitat information */}
-            {bird.habitat && (
-              <View style={styles.sectionCard}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Среда обитания
-                </ThemedText>
-                <View style={styles.sectionDivider} />
-                <ThemedText type="default" style={styles.habitatText}>
-                  {bird.habitat}
-                </ThemedText>
-              </View>
-            )}
-
-            {/* Additional notes */}
-            {bird.notes && (
-              <View style={styles.sectionCard}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Заметки
-                </ThemedText>
-                <View style={styles.sectionDivider} />
-                <ThemedText type="default" style={styles.descriptionText}>
-                  {bird.notes}
-                </ThemedText>
-              </View>
-            )}
-
-            {/* Subspecies in Kazakhstan */}
-            {bird.subspecies_in_kz && (
-              <View style={styles.sectionCard}>
-                <ThemedText type="title" style={styles.sectionTitle}>
-                  Подвиды в Казахстане
-                </ThemedText>
-                <View style={styles.sectionDivider} />
-                <ThemedText type="default" style={styles.descriptionText}>
-                  {bird.subspecies_in_kz}
-                </ThemedText>
-              </View>
-            )}
-
-            {/* Comments Section */}
-            <CommentsList birdId={bird.id} />
-          </View>
-        </ScrollView>
+              {/* Comments Section */}
+              <CommentsList birdId={bird.id} />
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </>
   );
@@ -456,6 +467,12 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: Colors.light.surfaceAlt 
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   
   // Hero section styles

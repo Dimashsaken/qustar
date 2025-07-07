@@ -1,10 +1,10 @@
 import React from 'react';
 import {
-    ActivityIndicator,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    View,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { Colors, DesignTokens } from '../constants/Colors';
 import { useComments } from '../hooks/useComments';
@@ -75,15 +75,15 @@ export const CommentsList: React.FC<CommentsListProps> = ({
   );
 
   /**
-   * Renders empty state
+   * Renders empty state when no notes exist
    */
   const renderEmpty = () => (
     <View style={styles.centerContainer}>
       <ThemedText type="title" style={styles.emptyTitle}>
-        У вас пока нет заметок
+        Пока нет заметок
       </ThemedText>
       <ThemedText type="default" style={styles.emptySubtext}>
-        Добавьте свои наблюдения и мысли об этой птице
+        Добавьте свои первые наблюдения об этой птице
       </ThemedText>
     </View>
   );
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: DesignTokens.spacing.xxl,
+    paddingVertical: DesignTokens.spacing.sm,
   },
   loadingText: {
     marginTop: DesignTokens.spacing.sm,

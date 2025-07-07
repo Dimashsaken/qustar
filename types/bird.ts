@@ -9,6 +9,7 @@ export interface Bird {
   common_name_ru: string | null;
   alternative_names: string | null;
   family: string | null;
+  Manipulus: string | null; // Unusual column name - kept as is from database
   order: string | null;
   subspecies_in_kz: string | null;
   size: string | null;
@@ -23,7 +24,9 @@ export interface Bird {
   beak_type: string | null;
   status_kz: string | null;
   habitat: string | null;
-  notes: string | null;
+  notes_kz: string | null; // Split from single 'notes' field
+  notes_ru: string | null; // Split from single 'notes' field
+  group: string | null; // Added missing field from database
 }
 
 /**

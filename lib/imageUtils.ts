@@ -128,13 +128,24 @@ export const generateBirdImageUrls = async (birdId: string, scientificName?: str
     const filenames: string[] = [];
     
     if (scientificName) {
-      // Primary format: {id}-{scientific-name-with-dashes}.jpeg
+      // Handle inconsistent naming conventions:
+      // 1. Spaces replaced with dashes: "358-Sylvia-curruca"
+      // 2. Spaces left as spaces: "358-Sylvia curruca"  
+      // 3. Both .jpg and .jpeg extensions
+      
       const nameWithDashes = scientificName.trim().replace(/\s+/g, '-');
+      const nameWithSpaces = scientificName.trim();
+      
+      // Try dashes first (most common format)
       filenames.push(`${birdId}-${nameWithDashes}.jpeg`);
       filenames.push(`${birdId}-${nameWithDashes}.jpg`);
+      
+      // Try spaces (alternative format like "358-Sylvia curruca.jpg")
+      filenames.push(`${birdId}-${nameWithSpaces}.jpeg`);
+      filenames.push(`${birdId}-${nameWithSpaces}.jpg`);
     }
     
-    // Fallback formats
+    // Fallback formats without scientific name
     filenames.push(`${birdId}.jpeg`);
     filenames.push(`${birdId}.jpg`);
     
@@ -293,10 +304,21 @@ export const generateBirdMapUrl = async (birdId: string, scientificName?: string
     const filesToTry: string[] = [];
     
     if (scientificName) {
+      // Handle same naming inconsistencies as bird images:
+      // 1. Spaces replaced with dashes: "358-Sylvia-curruca-map"
+      // 2. Spaces left as spaces: "358-Sylvia curruca-map"
+      // 3. Both .jpg and .jpeg extensions
+      
       const nameWithDashes = scientificName.trim().replace(/\s+/g, '-');
-      // Try .jpeg first (what actually exists), then .jpg as fallback
+      const nameWithSpaces = scientificName.trim();
+      
+      // Try dashes first (most common format)
       filesToTry.push(`${numericId}-${nameWithDashes}-map.jpeg`);
       filesToTry.push(`${numericId}-${nameWithDashes}-map.jpg`);
+      
+      // Try spaces (alternative format)
+      filesToTry.push(`${numericId}-${nameWithSpaces}-map.jpeg`);
+      filesToTry.push(`${numericId}-${nameWithSpaces}-map.jpg`);
     }
     
     // Fallback formats without scientific name

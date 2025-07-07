@@ -65,19 +65,19 @@ export default function FavoritesFullScreen() {
    * Renders loading state
    */
   const renderLoading = () => (
-    <ThemedView style={styles.centerContainer}>
+    <View style={styles.centerContainer}>
       <ActivityIndicator size="large" color={Colors.light.primary} />
       <ThemedText type="default" style={styles.loadingText}>
         Загрузка избранного...
       </ThemedText>
-    </ThemedView>
+    </View>
   );
 
   /**
    * Renders error state
    */
   const renderError = () => (
-    <ThemedView style={styles.centerContainer}>
+    <View style={styles.centerContainer}>
       <ThemedText type="title" style={styles.errorText}>
         Ошибка загрузки
       </ThemedText>
@@ -89,14 +89,14 @@ export default function FavoritesFullScreen() {
           Попробовать снова
         </ThemedText>
       </Pressable>
-    </ThemedView>
+    </View>
   );
 
   /**
    * Renders empty favorites state
    */
   const renderEmpty = () => (
-    <ThemedView style={styles.centerContainer}>
+    <View style={styles.centerContainer}>
       <View style={styles.emptyState}>
         <IconSymbol name="heart" size={64} color={Colors.light.textMuted} />
         <ThemedText type="title" style={styles.emptyTitle}>
@@ -114,7 +114,7 @@ export default function FavoritesFullScreen() {
           </ThemedText>
         </Pressable>
       </View>
-    </ThemedView>
+    </View>
   );
 
   /**
@@ -219,7 +219,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: DesignTokens.spacing.xl 
+    padding: DesignTokens.spacing.xl,
+    backgroundColor: Colors.light.background
   },
 
   // Loading styles
