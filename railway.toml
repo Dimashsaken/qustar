@@ -5,7 +5,11 @@ builder = "nixpacks"
 providers = ["node"]
 
 [build.nixpacks.build]
-cmds = ["npm ci", "npm run build:web"]
+cmds = [
+  "npm ci",
+  "npx expo install --fix",
+  "NODE_ENV=production npx expo export --platform web --output-dir dist"
+]
 
 [deploy]
 startCommand = "npx serve dist --single --listen 3000" 
