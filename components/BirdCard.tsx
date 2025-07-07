@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { Animated, Dimensions, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Dimensions, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors, DesignTokens } from '../constants/Colors';
+import { useFavorites } from '../hooks/useFavorites';
 import type { BirdListItem } from '../types/bird';
 import { BirdImage } from './BirdImage';
 import { ThemedText } from './ThemedText';
@@ -12,6 +13,7 @@ interface BirdCardProps {
   variant?: 'list' | 'grid';
   imagePriority?: 'high' | 'normal' | 'low';
   onPress?: () => void;
+  showFavoriteButton?: boolean;
 }
 
 // Get screen dimensions for grid calculations
@@ -26,15 +28,18 @@ const gridItemWidth = (screenWidth - 32) / 2 - 8;
  * @param variant - Display variant: 'list' or 'grid'
  * @param imagePriority - Image priority: 'high', 'normal', or 'low'
  * @param onPress - Optional custom press handler
+ * @param showFavoriteButton - Whether to show favorite button
  * @returns JSX.Element - Pressable bird card component
  */
 export const BirdCard: React.FC<BirdCardProps> = React.memo(({
   bird,
   variant = 'list',
   imagePriority = 'normal',
-  onPress
+  onPress,
+  showFavoriteButton = true
 }) => {
   const animatedValue = React.useRef(new Animated.Value(1)).current;
+  const { isFavorite, toggleFavorite, isAuthenticated, isAdding, isRemoving } = useFavorites();
 
   const handlePressIn = () => {
     Animated.timing(animatedValue, {
@@ -56,7 +61,32 @@ export const BirdCard: React.FC<BirdCardProps> = React.memo(({
     if (onPress) {
       onPress();
     } else {
-      router.push(`/bird/${bird.id}`);
+      router.push(`/bird/${bird.id}` as any);
+    }
+  };
+
+  const handleFavoritePress = async (event: any) => {
+    event.stopPropagation(); // Prevent card press
+    
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Вход в систему',
+        'Для добавления птиц в избранное необходимо войти в систему',
+        [
+          { text: 'Отмена', style: 'cancel' },
+          { text: 'Войти', onPress: () => {
+            // Navigate to favorites tab which will show auth modal
+            router.push('/(tabs)/favorites' as any);
+          }},
+        ]
+      );
+      return;
+    }
+
+    try {
+      await toggleFavorite(bird);
+    } catch (error) {
+      Alert.alert('Ошибка', (error as Error).message);
     }
   };
 
@@ -97,6 +127,26 @@ export const BirdCard: React.FC<BirdCardProps> = React.memo(({
               priority={imagePriority}
               style={isGrid ? styles.gridImage : styles.image}
             />
+            
+            {/* Favorite button overlay */}
+            {showFavoriteButton && (
+              <Pressable
+                style={styles.favoriteButton}
+                onPress={handleFavoritePress}
+                disabled={isAdding || isRemoving}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={isFavorite(bird.id) ? 'Удалить из избранного' : 'Добавить в избранное'}
+              >
+                <Text style={[
+                  styles.favoriteIcon,
+                  isFavorite(bird.id) && styles.favoriteIconActive,
+                  (isAdding || isRemoving) && styles.favoriteIconDisabled
+                ]}>
+                  {isFavorite(bird.id) ? '❤️' : '🤍'}
+                </Text>
+              </Pressable>
+            )}
           </ImageContainer>
           
           <TextContainer style={isGrid ? styles.gridTextContainer : styles.textContainer}>
@@ -169,9 +219,11 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     marginRight: DesignTokens.spacing.md,
+    position: 'relative',
   },
   gridImageContainer: {
     marginRight: 0,
+    position: 'relative',
   },
   textContainer: {
     flex: 1,
@@ -232,5 +284,29 @@ const styles = StyleSheet.create({
   image: {
     width: 64,
     height: 64,
+  },
+  
+  // Favorite button styles
+  favoriteButton: {
+    position: 'absolute',
+    top: DesignTokens.spacing.xs,
+    right: DesignTokens.spacing.xs,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...DesignTokens.shadows.subtle,
+    zIndex: 1,
+  },
+  favoriteIcon: {
+    fontSize: 16,
+  },
+  favoriteIconActive: {
+    fontSize: 16,
+  },
+  favoriteIconDisabled: {
+    opacity: 0.5,
   },
 }); 

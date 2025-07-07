@@ -4,9 +4,11 @@ import React from 'react';
 import { ActivityIndicator, Alert, Dimensions, Linking, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BirdImage } from '../../components/BirdImage';
 import { BirdMap } from '../../components/BirdMap';
+import { CommentsList } from '../../components/CommentsList';
 import { ThemedText } from '../../components/ThemedText';
 import { Colors, DesignTokens } from '../../constants/Colors';
 import { useBird } from '../../hooks/useBirds';
+import { useFavorites } from '../../hooks/useFavorites';
 import { Bird } from '../../types/bird';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -75,6 +77,7 @@ const handleVideoPress = async (bird: Bird): Promise<void> => {
 export default function BirdDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: bird, isLoading, error } = useBird(id || '');
+  const { toggleFavorite, isFavorite, isAuthenticated, isAdding, isRemoving } = useFavorites();
 
   /**
    * Renders loading state
@@ -215,13 +218,49 @@ export default function BirdDetailScreen() {
                 >
                   <Text style={styles.videoButtonIcon}>▶</Text>
                 </Pressable>
+
+                                 {/* Favorite button */}
+                 <Pressable 
+                   style={styles.favoriteButton} 
+                   onPress={async () => {
+                     if (!isAuthenticated) {
+                       Alert.alert(
+                         'Вход в систему',
+                         'Для добавления птиц в избранное необходимо войти в систему',
+                         [
+                           { text: 'Отмена', style: 'cancel' },
+                           { text: 'Войти', onPress: () => {
+                             router.push('/(tabs)/favorites' as any);
+                           }},
+                         ]
+                       );
+                       return;
+                     }
+                     
+                     try {
+                       await toggleFavorite(bird);
+                     } catch (error) {
+                       Alert.alert('Ошибка', (error as Error).message);
+                     }
+                   }}
+                   disabled={isAdding || isRemoving}
+                   accessibilityLabel={isFavorite(bird.id) ? 'Удалить из избранного' : 'Добавить в избранное'}
+                   accessibilityRole="button"
+                 >
+                   <Text style={[
+                     styles.favoriteButtonIcon,
+                     (isAdding || isRemoving) && { opacity: 0.5 }
+                   ]}>
+                     {isFavorite(bird.id) ? '❤️' : '🤍'}
+                   </Text>
+                 </Pressable>
               </View>
             </View>
             
             {/* Migration & Habitat Map */}
             <View style={styles.sectionCard}>
               <ThemedText type="title" style={styles.sectionTitle}>
-                Карта миграции
+                Карта
               </ThemedText>
               <View style={styles.sectionDivider} />
               <BirdMap 
@@ -234,7 +273,7 @@ export default function BirdDetailScreen() {
             {(kazakhName || englishName) && (
               <View style={styles.sectionCard}>
                 <ThemedText type="title" style={styles.sectionTitle}>
-                  Альтернативные названия
+                  Имена птицы
                 </ThemedText>
                 <View style={styles.sectionDivider} />
                 {kazakhName && (
@@ -398,6 +437,9 @@ export default function BirdDetailScreen() {
                 </ThemedText>
               </View>
             )}
+
+            {/* Comments Section */}
+            <CommentsList birdId={bird.id} />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -496,6 +538,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 2, // Optical centering for play icon
+  },
+  
+  // Favorite button
+  favoriteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...DesignTokens.shadows.card,
+    marginLeft: DesignTokens.spacing.md,
+  },
+  favoriteButtonIcon: {
+    fontSize: 18,
   },
   
   // Content card with elevation

@@ -103,7 +103,7 @@ export default function AllBirdsScreen() {
    * @returns JSX.Element - BirdCard component styled for grid
    */
   const renderBird = ({ item }: { item: BirdListItem }) => (
-    <BirdCard bird={item} variant="grid" />
+    <BirdCard bird={item} variant="grid" showFavoriteButton={false} />
   );
 
   /**

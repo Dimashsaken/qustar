@@ -66,7 +66,7 @@ export const FilteredBirdsList: React.FC<FilteredBirdsListProps> = ({
   }
 
   const renderBirdCard = ({ item }: { item: BirdListItem }) => (
-    <BirdCard bird={item} variant="grid" />
+    <BirdCard bird={item} variant="grid" showFavoriteButton={false} />
   );
 
   return (

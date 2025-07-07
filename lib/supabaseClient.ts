@@ -1,9 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
 /**
  * Supabase configuration and client singleton
  * Connects to the QuStar bird database with authenticated access
- * Now supports private storage buckets with signed URL generation
+ * Now supports user authentication and private storage buckets
+ * Configured with AsyncStorage for proper session persistence in React Native
  */
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
@@ -16,13 +18,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 /**
  * Singleton Supabase client instance
- * Configured for authenticated access to bird data and private storage
+ * Configured for user authentication and private storage access
+ * Uses AsyncStorage for secure session persistence across app restarts
  */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: false, // No user authentication needed for bird data
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
+    storage: AsyncStorage, // Use AsyncStorage for secure session persistence
+    persistSession: true, // Enable session persistence for user auth
+    autoRefreshToken: true, // Auto-refresh expired tokens
+    detectSessionInUrl: true, // Detect session from URL (for email confirmations)
+    flowType: 'pkce', // Use PKCE flow for better security
+    storageKey: 'qustar-auth-token', // Custom storage key for this app
   },
   realtime: {
     params: {
@@ -35,6 +41,26 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
   },
 });
+
+// Types for better TypeScript support
+export type AuthUser = {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    full_name?: string;
+    display_name?: string;
+  };
+};
+
+export type AuthError = {
+  message: string;
+  status?: number;
+};
+
+export type AuthResponse = {
+  user: AuthUser | null;
+  error: AuthError | null;
+};
 
 // Test the connection on startup
 (async () => {

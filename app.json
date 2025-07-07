@@ -19,7 +19,6 @@
     },
     "plugins": [
       "expo-router",
-      "expo-splash-screen",
       "expo-localization"
     ],
     "experiments": {
