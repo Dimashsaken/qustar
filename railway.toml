@@ -8,7 +8,7 @@ providers = ["node"]
 cmds = [
   "npm ci",
   "npx expo install --fix",
-  "NODE_ENV=production npx expo export --platform web --output-dir dist"
+  "npm run build:web"
 ]
 
 [deploy]

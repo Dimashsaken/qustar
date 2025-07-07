@@ -15,7 +15,8 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/images/red-book-icon.png"
     },
     "plugins": [
       "expo-router",
