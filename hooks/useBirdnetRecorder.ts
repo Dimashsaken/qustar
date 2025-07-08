@@ -312,7 +312,6 @@ export const useBirdnetRecorder = (): AudioRecorderHook => {
           user_id: userId,
           path: storagePath,
           status: 'pending',
-          file_size: fileData.size,
         })
         .select()
         .single();

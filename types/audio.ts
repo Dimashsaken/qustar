@@ -12,7 +12,6 @@ export interface AudioUpload {
   path: string;
   recorded_at: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
-  file_size?: number;
   error_message?: string;
 }
 
