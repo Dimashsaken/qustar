@@ -1,6 +1,7 @@
 [build]
 builder = "dockerfile"
-dockerfilePath = "dockerfile"
+dockerfilePath = "birdnet-api/dockerfile"
+dockerContext = "birdnet-api"
 
 [deploy]
 restartPolicyType = "on_failure"
