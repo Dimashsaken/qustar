@@ -11,37 +11,38 @@ import type { BirdDetection, DetectionWithAudio } from '../types/audio';
 import { useAuth } from './useAuth';
 
 /**
- * Fetch user's audio uploads with their detection results
- * @param userId - User ID to filter uploads
- * @returns Promise resolving to uploads with detections
+ * Fetch user's detection results with associated audio uploads
+ * @param userId - User ID to filter detections
+ * @returns Promise resolving to detections with audio data
  */
 const fetchAudioDetections = async (userId: string): Promise<DetectionWithAudio[]> => {
-  const { data: uploads, error: uploadsError } = await supabase
-    .from('audio_uploads')
+  // Fetch detections directly by user_id for better performance
+  const { data: detections, error: detectionsError } = await supabase
+    .from('detections')
     .select(`
       *,
-      detections:detections(*)
+      audio_uploads:audio_id (*)
     `)
     .eq('user_id', userId)
-    .order('recorded_at', { ascending: false });
+    .order('created_at', { ascending: false });
 
-  if (uploadsError) {
-    throw new Error(`Failed to fetch audio uploads: ${uploadsError.message}`);
+  if (detectionsError) {
+    throw new Error(`Failed to fetch detections: ${detectionsError.message}`);
   }
 
-  // Flatten the data structure for easier consumption
-  const detectionsWithAudio: DetectionWithAudio[] = [];
-  
-  uploads.forEach((upload) => {
-    if (upload.detections && upload.detections.length > 0) {
-      upload.detections.forEach((detection: BirdDetection) => {
-        detectionsWithAudio.push({
-          detection,
-          audioUpload: upload,
-        });
-      });
-    }
-  });
+  // Transform data structure for compatibility
+  const detectionsWithAudio: DetectionWithAudio[] = detections.map((detection) => ({
+    detection: {
+      id: detection.id,
+      audio_id: detection.audio_id,
+      species: detection.species,
+      confidence: detection.confidence,
+      start_sec: detection.start_sec,
+      end_sec: detection.end_sec,
+      created_at: detection.created_at,
+    },
+    audioUpload: detection.audio_uploads,
+  }));
 
   return detectionsWithAudio;
 };
@@ -76,7 +77,7 @@ export const useAudioDetections = () => {
 
     console.log('🔔 Setting up real-time detection subscription');
 
-    // Subscribe to new detections for user's audio uploads
+    // Subscribe to new detections directly for the current user
     const channel = supabase
       .channel('detection-updates')
       .on(
@@ -85,21 +86,12 @@ export const useAudioDetections = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'detections',
+          filter: `user_id=eq.${user.id}`, // Direct filter by user_id
         },
-        async (payload) => {
+        (payload) => {
           console.log('🔔 New detection received:', payload.new);
-          
-          // Verify this detection belongs to the current user
-          const { data: audioUpload } = await supabase
-            .from('audio_uploads')
-            .select('user_id')
-            .eq('id', (payload.new as BirdDetection).audio_id)
-            .single();
-
-          if (audioUpload?.user_id === user.id) {
-            // Invalidate and refetch detections
-            queryClient.invalidateQueries({ queryKey: ['audioDetections', user.id] });
-          }
+          // Invalidate and refetch detections
+          queryClient.invalidateQueries({ queryKey: ['audioDetections', user.id] });
         }
       )
       .on(

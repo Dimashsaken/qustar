@@ -154,10 +154,34 @@ serve(async (req: Request) => {
     const results = predictions.results || predictions;
     console.log(`BirdNET returned ${results.length} detections`);
 
+    // Get user_id from the audio upload record
+    const { data: audioUpload, error: audioError } = await supabase
+      .from('audio_uploads')
+      .select('user_id')
+      .eq('id', audioId)
+      .single();
+
+    if (audioError || !audioUpload) {
+      console.error('Error fetching audio upload user_id:', audioError);
+      await supabase
+        .from('audio_uploads')
+        .update({ status: 'failed' })
+        .eq('id', audioId);
+      
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch audio upload user_id' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     // Insert detection results into database
     if (results.length > 0) {
       const detections = results.map((prediction: any) => ({
         audio_id: audioId,
+        user_id: audioUpload.user_id, // Include user_id for privacy
         species: prediction.species || prediction.common_name,
         confidence: prediction.confidence,
         start_sec: prediction.start || prediction.start_time || 0,

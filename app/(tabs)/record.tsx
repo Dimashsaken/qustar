@@ -9,17 +9,19 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import {
-    Alert,
-    Platform,
-    Pressable,
-    StatusBar as RNStatusBar,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  Alert,
+  Platform,
+  Pressable,
+  StatusBar as RNStatusBar,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 
+import { DetectionCard } from '../../components/DetectionCard';
+import { DetectionSummary } from '../../components/DetectionSummary';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { Colors, DesignTokens } from '../../constants/Colors';
@@ -384,50 +386,33 @@ export default function RecordScreen() {
               <Text style={styles.statusText}>Загрузка обнаружений...</Text>
             </View>
           ) : detections.length > 0 ? (
-            <View style={styles.detectionsContainer}>
-              {detections.slice(0, 5).map((item: DetectionWithAudio, index: number) => (
-                <Pressable 
-                  key={`${item.detection.id}-${index}`} 
-                  style={styles.detectionItem}
-                  onPress={() => {
-                    // Navigate to bird detail if we can match the species
-                    const speciesParts = item.detection.species.split('_');
-                    if (speciesParts.length >= 2) {
-                      router.push(`/bird/search?species=${encodeURIComponent(item.detection.species)}`);
-                    }
-                  }}
-                >
-                  <Text style={styles.detectionSpecies}>
-                    {item.detection.species.replace(/_/g, ' ')}
-                  </Text>
-                  <Text style={styles.detectionConfidence}>
-                    Уверенность: {Math.round(item.detection.confidence * 100)}%
-                  </Text>
-                  <Text style={styles.detectionTime}>
-                    {new Date(item.audioUpload.recorded_at).toLocaleDateString('ru-RU', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </Text>
-                </Pressable>
-              ))}
+            <>
+              {/* Detection Statistics Summary */}
+              <DetectionSummary detections={detections} />
               
-              {detections.length > 5 && (
-                <Pressable 
-                  style={styles.viewMoreButton}
-                  onPress={() => {
-                    // TODO: Navigate to full detections history page
-                    Alert.alert('История обнаружений', 'Полная история скоро будет доступна!');
-                  }}
-                >
-                  <Text style={styles.viewMoreText}>
-                    Посмотреть все ({detections.length}) →
-                  </Text>
-                </Pressable>
-              )}
-            </View>
+              <View style={styles.detectionsContainer}>
+                {detections.slice(0, 5).map((detection: DetectionWithAudio, index: number) => (
+                  <DetectionCard
+                    key={`${detection.detection.id}-${index}`}
+                    detection={detection}
+                  />
+                ))}
+                
+                {detections.length > 5 && (
+                  <Pressable 
+                    style={styles.viewMoreButton}
+                    onPress={() => {
+                      // TODO: Navigate to full detections history page
+                      Alert.alert('История обнаружений', 'Полная история скоро будет доступна!');
+                    }}
+                  >
+                    <Text style={styles.viewMoreText}>
+                      Посмотреть все ({detections.length}) →
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            </>
           ) : (
             <View style={styles.emptyStateContainer}>
               <Text style={styles.emptyStateText}>
@@ -647,30 +632,6 @@ const styles = StyleSheet.create({
   detectionsContainer: {
     gap: DesignTokens.spacing.sm,
   },
-  detectionItem: {
-    backgroundColor: Colors.light.background,
-    padding: DesignTokens.spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-         ...DesignTokens.shadows.card,
-  },
-  detectionSpecies: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.light.text,
-    marginBottom: 4,
-  },
-  detectionConfidence: {
-    fontSize: 14,
-    color: Colors.light.tint,
-    marginBottom: 2,
-  },
-  detectionTime: {
-    fontSize: 12,
-    color: Colors.light.text,
-    opacity: 0.6,
-  },
   viewMoreButton: {
     padding: DesignTokens.spacing.md,
     alignItems: 'center',
@@ -699,6 +660,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     opacity: 0.7,
     textAlign: 'center',
-         lineHeight: 20,
-   },
- }); 
+    lineHeight: 20,
+  },
+}); 

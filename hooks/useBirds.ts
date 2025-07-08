@@ -57,7 +57,7 @@ export const useBirds = (filters?: BirdSearchFilters): UseQueryResult<BirdListIt
     staleTime: 1000 * 60 * 60, // 1 hour cache as per requirements
     gcTime: 1000 * 60 * 60 * 2, // 2 hours garbage collection
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -84,6 +84,55 @@ const fetchBirdById = async (id: string): Promise<Bird | null> => {
 };
 
 /**
+ * Fetches bird details by BirdNet species name (scientific name)
+ * @param speciesName - BirdNet species name (e.g., "Turdus_merula")
+ * @returns Promise<Bird | null> - Full bird data or null if not found
+ */
+const fetchBirdBySpeciesName = async (speciesName: string): Promise<Bird | null> => {
+  if (!speciesName) return null;
+
+  // Convert BirdNet format (e.g., "Turdus_merula") to searchable format
+  const searchName = speciesName.replace(/_/g, ' ');
+  
+  // Try multiple search strategies
+  const searchQueries = [
+    // Direct scientific name match
+    `scientific_name.ilike.%${searchName}%`,
+    // Direct common name matches
+    `common_name_en.ilike.%${searchName}%`,
+    `common_name_ru.ilike.%${searchName}%`,
+    `common_name_kz.ilike.%${searchName}%`,
+  ];
+
+  // Also try searching by genus only if full species search fails
+  const genusPart = searchName.split(' ')[0];
+  if (genusPart && genusPart.length > 3) {
+    searchQueries.push(`scientific_name.ilike.${genusPart}%`);
+  }
+
+  // Try each search query
+  for (const query of searchQueries) {
+    try {
+      const { data, error } = await supabase
+        .from('qustar-info')
+        .select('*')
+        .or(query)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        return data[0];
+      }
+    } catch (err) {
+      console.warn(`Search query failed: ${query}`, err);
+      continue;
+    }
+  }
+
+  console.log(`❌ No bird found for species: ${speciesName} (${searchName})`);
+  return null;
+};
+
+/**
  * React Query hook for fetching a single bird by ID
  * @param id - Bird ID
  * @returns UseQueryResult with single bird data
@@ -95,6 +144,22 @@ export const useBird = (id: string): UseQueryResult<Bird | null, Error> => {
     enabled: !!id,
     staleTime: 1000 * 60 * 60, // 1 hour cache
     gcTime: 1000 * 60 * 60 * 2, // 2 hours garbage collection
+  });
+};
+
+/**
+ * React Query hook for fetching bird details by BirdNet species name
+ * @param speciesName - BirdNet species name (e.g., "Turdus_merula")
+ * @returns UseQueryResult with bird data or null if not found
+ */
+export const useBirdBySpeciesName = (speciesName: string): UseQueryResult<Bird | null, Error> => {
+  return useQuery({
+    queryKey: ['bird-by-species', speciesName],
+    queryFn: () => fetchBirdBySpeciesName(speciesName),
+    enabled: !!speciesName,
+    staleTime: 1000 * 60 * 60, // 1 hour cache
+    gcTime: 1000 * 60 * 60 * 2, // 2 hours garbage collection
+    retry: 1, // Limited retries for graceful degradation
   });
 };
 

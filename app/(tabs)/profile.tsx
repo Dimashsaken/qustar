@@ -62,6 +62,13 @@ export default function ProfileScreen() {
   };
 
   /**
+   * Handles detections section press to show full page
+   */
+  const handleDetectionsPress = () => {
+    router.push('/detections-full' as any);
+  };
+
+  /**
    * Renders user profile header
    */
   const renderProfileHeader = () => (
@@ -213,6 +220,49 @@ export default function ProfileScreen() {
     );
   };
 
+  /**
+   * Renders detections section with list display
+   */
+  const renderDetectionsSection = () => {
+    const detectionsCount = detections.length;
+
+    return (
+      <ThemedView style={styles.section}>
+        <Pressable style={styles.sectionHeaderClickable} onPress={handleDetectionsPress}>
+          <View style={styles.sectionTitleRow}>
+            <View style={[styles.iconContainer, { backgroundColor: Colors.light.info }]}>
+              <IconSymbol 
+                name="waveform" 
+                size={22} 
+                color={Colors.light.surface} 
+              />
+            </View>
+            <View style={styles.sectionContent}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Мои обнаружения
+              </ThemedText>
+              <ThemedText type="default" style={styles.sectionSubtitle}>
+                {detectionsCount > 0 ? `${detectionsCount} записей с птицами` : 'У вас пока нет записей'}
+              </ThemedText>
+            </View>
+            <View style={styles.arrowContainer}>
+              <IconSymbol name="chevron.right" size={20} color={Colors.light.info} />
+            </View>
+          </View>
+        </Pressable>
+
+        {detectionsLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={Colors.light.info} />
+            <ThemedText type="default" style={styles.loadingText}>
+              Загрузка записей...
+            </ThemedText>
+          </View>
+        )}
+      </ThemedView>
+    );
+  };
+
   return (
     <>
       <StatusBar style="dark" backgroundColor="transparent" translucent />
@@ -222,6 +272,7 @@ export default function ProfileScreen() {
           {renderStats()}
           {renderFavoritesSection()}
           {renderNotesSection()}
+          {renderDetectionsSection()}
           
           {/* Additional profile sections can be added here */}
         </ScrollView>

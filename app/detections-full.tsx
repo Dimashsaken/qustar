@@ -11,33 +11,33 @@ import {
     StyleSheet,
     View
 } from 'react-native';
-import { BirdCard } from '../components/BirdCard';
+import { DetectionCard } from '../components/DetectionCard';
+import { DetectionSummary } from '../components/DetectionSummary';
 import { ThemedText } from '../components/ThemedText';
 import { ThemedView } from '../components/ThemedView';
 import { IconSymbol } from '../components/ui/IconSymbol';
 import { Colors, DesignTokens } from '../constants/Colors';
-import { useFavorites } from '../hooks/useFavorites';
-import type { BirdListItem } from '../types/bird';
+import { useAudioDetections } from '../hooks/useAudioDetections';
+import type { DetectionWithAudio } from '../types/audio';
 
 /**
- * Full-screen favorites page showing all user's favorite birds
- * @returns JSX.Element - Full-screen favorites component
+ * Data structure for FlashList items
  */
-export default function FavoritesFullScreen() {
+type ListItem = 
+  | { type: 'summary' }
+  | { type: 'detection'; detection: DetectionWithAudio; index: number };
+
+/**
+ * Full-screen detections page showing all user's bird detection history
+ * @returns JSX.Element - Full-screen detections component
+ */
+export default function DetectionsFullScreen() {
   const { 
-    favorites, 
+    detections, 
     isLoading, 
     error, 
-    count,
     refetch 
-  } = useFavorites();
-
-  /**
-   * Handles bird card press to navigate to detail screen
-   */
-  const handleBirdPress = (bird: BirdListItem) => {
-    router.push(`/bird/${bird.id}` as any);
-  };
+  } = useAudioDetections();
 
   /**
    * Handles back button press
@@ -55,7 +55,7 @@ export default function FavoritesFullScreen() {
         <IconSymbol name="chevron.left" size={24} color={Colors.light.text} />
       </Pressable>
       <ThemedText type="title" style={styles.title}>
-        Избранные птицы
+        Мои обнаружения
       </ThemedText>
       <View style={styles.headerSpacer} />
     </View>
@@ -66,9 +66,9 @@ export default function FavoritesFullScreen() {
    */
   const renderLoading = () => (
     <View style={styles.centerContainer}>
-      <ActivityIndicator size="large" color={Colors.light.primary} />
+      <ActivityIndicator size="large" color={Colors.light.info} />
       <ThemedText type="default" style={styles.loadingText}>
-        Загрузка избранного...
+        Загрузка обнаружений...
       </ThemedText>
     </View>
   );
@@ -82,7 +82,7 @@ export default function FavoritesFullScreen() {
         Ошибка загрузки
       </ThemedText>
       <ThemedText type="default" style={styles.errorSubtext}>
-        {error?.message || 'Не удалось загрузить избранное'}
+        {error?.message || 'Не удалось загрузить записи'}
       </ThemedText>
       <Pressable style={styles.retryButton} onPress={() => refetch()}>
         <ThemedText type="bold" style={styles.retryButtonText}>
@@ -93,24 +93,24 @@ export default function FavoritesFullScreen() {
   );
 
   /**
-   * Renders empty favorites state
+   * Renders empty detections state
    */
   const renderEmpty = () => (
     <View style={styles.centerContainer}>
       <View style={styles.emptyState}>
-        <IconSymbol name="heart" size={64} color={Colors.light.textMuted} />
+        <IconSymbol name="waveform" size={64} color={Colors.light.textMuted} />
         <ThemedText type="title" style={styles.emptyTitle}>
-          Нет избранных птиц
+          Нет записей
         </ThemedText>
         <ThemedText type="default" style={styles.emptySubtext}>
-          Добавьте птиц в избранное, нажав на значок сердца в карточке птицы
+          Перейдите на вкладку "Запись" и начните записывать звуки птиц для их распознавания
         </ThemedText>
         <Pressable 
-          style={styles.browseButton} 
-          onPress={() => router.push('/(tabs)/' as any)}
+          style={styles.recordButton} 
+          onPress={() => router.push('/(tabs)/record' as any)}
         >
-          <ThemedText type="bold" style={styles.browseButtonText}>
-            Посмотреть птиц
+          <ThemedText type="bold" style={styles.recordButtonText}>
+            Начать запись
           </ThemedText>
         </Pressable>
       </View>
@@ -118,26 +118,40 @@ export default function FavoritesFullScreen() {
   );
 
   /**
-   * Renders favorites list
+   * Renders detections list with summary
    */
-  const renderFavorites = () => (
-    <ThemedView style={styles.container}>
-      <FlashList
-        data={favorites}
-        renderItem={({ item }) => (
-          <BirdCard
-            bird={item}
-            variant="grid"
-            onPress={() => handleBirdPress(item)}
-          />
-        )}
-        estimatedItemSize={180}
-        numColumns={2}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-      />
-    </ThemedView>
-  );
+  const renderDetections = () => {
+    const listData: ListItem[] = [
+      { type: 'summary' }, 
+      ...detections.map((detection: DetectionWithAudio, index: number) => ({ 
+        type: 'detection' as const, 
+        detection, 
+        index 
+      }))
+    ];
+
+    return (
+      <ThemedView style={styles.container}>
+        <FlashList
+          data={listData}
+          renderItem={({ item }: { item: ListItem }) => {
+            if (item.type === 'summary') {
+              return <DetectionSummary detections={detections} />;
+            }
+            return (
+              <DetectionCard
+                detection={item.detection}
+              />
+            );
+          }}
+          estimatedItemSize={120}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          getItemType={(item: ListItem) => item.type}
+        />
+      </ThemedView>
+    );
+  };
 
   return (
     <>
@@ -148,8 +162,8 @@ export default function FavoritesFullScreen() {
         
         {isLoading ? renderLoading() : 
          error ? renderError() : 
-         count === 0 ? renderEmpty() : 
-         renderFavorites()}
+         detections.length === 0 ? renderEmpty() : 
+         renderDetections()}
       </SafeAreaView>
     </>
   );
@@ -194,39 +208,36 @@ const styles = StyleSheet.create({
     width: 44,
   },
 
-  // Center container for states
-  centerContainer: { 
+  // Content styles
+  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: DesignTokens.spacing.xl,
-    backgroundColor: Colors.light.background
+    paddingHorizontal: DesignTokens.spacing.lg,
   },
-
-  // Loading styles
-  loadingText: { 
-    marginTop: DesignTokens.spacing.lg,
+  loadingText: {
+    marginTop: DesignTokens.spacing.md,
     color: Colors.light.textMuted,
   },
-
-  // Error styles
-  errorText: { 
+  
+  // Error state styles
+  errorText: {
+    color: Colors.light.error,
     textAlign: 'center',
     marginBottom: DesignTokens.spacing.sm,
-    color: Colors.light.error,
   },
-  errorSubtext: { 
+  errorSubtext: {
+    color: Colors.light.textMuted,
     textAlign: 'center',
     marginBottom: DesignTokens.spacing.lg,
-    color: Colors.light.textMuted,
   },
-  retryButton: { 
-    backgroundColor: Colors.light.primary,
+  retryButton: {
+    backgroundColor: Colors.light.info,
     paddingHorizontal: DesignTokens.spacing.lg,
     paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.button,
+    borderRadius: 8,
   },
-  retryButtonText: { 
+  retryButtonText: {
     color: Colors.light.surface,
   },
 
@@ -238,28 +249,28 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: Colors.light.text,
     textAlign: 'center',
-    marginTop: DesignTokens.spacing.lg,
+    marginTop: DesignTokens.spacing.md,
     marginBottom: DesignTokens.spacing.sm,
   },
   emptySubtext: {
     color: Colors.light.textMuted,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: DesignTokens.spacing.xl,
+    lineHeight: 20,
+    marginBottom: DesignTokens.spacing.lg,
   },
-  browseButton: {
-    backgroundColor: Colors.light.primary,
+  recordButton: {
+    backgroundColor: Colors.light.info,
     paddingHorizontal: DesignTokens.spacing.lg,
     paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.button,
+    borderRadius: 8,
   },
-  browseButtonText: {
+  recordButtonText: {
     color: Colors.light.surface,
   },
 
   // List styles
-  listContainer: { 
-    paddingHorizontal: DesignTokens.spacing.sm,
-    paddingBottom: 100 
+  listContainer: {
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingBottom: DesignTokens.spacing.xl,
   },
 }); 

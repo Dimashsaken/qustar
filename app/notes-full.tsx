@@ -114,12 +114,6 @@ export default function NotesFullScreen() {
    */
   const renderNotes = () => (
     <ThemedView style={styles.container}>
-      <View style={styles.statsContainer}>
-        <ThemedText type="default" style={styles.statsText}>
-          {count} {count === 1 ? 'заметка' : count < 5 ? 'заметки' : 'заметок'}
-        </ThemedText>
-      </View>
-
       <FlashList
         data={userNotes}
         renderItem={({ item }) => (
@@ -188,19 +182,6 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 44,
-  },
-
-  // Stats container
-  statsContainer: {
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    backgroundColor: Colors.light.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  statsText: {
-    color: Colors.light.textMuted,
-    fontSize: 14,
   },
 
   // List container
