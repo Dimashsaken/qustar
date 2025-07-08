@@ -4,4 +4,5 @@ tensorflow==2.15.0
 flask>=2.0.0
 flask-cors>=3.0.0
 librosa>=0.8.0
-soundfile>=0.10.0 
+soundfile>=0.10.0
+birdnetlib>=0.6.1 

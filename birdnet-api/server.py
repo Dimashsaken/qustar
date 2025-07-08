@@ -13,16 +13,28 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
+import numpy as np  # type: ignore
 
-# Add BirdNET modules to path (support both >=v2 package and legacy flat structure)
+# Import BirdNET-Analyzer package
+analyze = None  # Initialize to avoid linter errors
+species = None
+
 try:
-    from birdnet_analyzer import analyze, species  # Newer package layout
+    # For the installed package version
+    import birdnetlib  # type: ignore
+    import birdnetlib.analyzer  # type: ignore
+    BIRDNET_PACKAGE = True
+    logger = logging.getLogger(__name__)
+    logger.info("Using BirdNET package version")
 except ImportError:
-    # Fallback to legacy layout (analyze.py & species.py in repo root)
-    sys.path.extend(["/app/BirdNET-Analyzer", "/app"])
     try:
+        # Fallback to analyze module approach
+        sys.path.extend(["/app/BirdNET-Analyzer", "/app"])
         import analyze  # type: ignore
         import species  # type: ignore
+        BIRDNET_PACKAGE = False
+        logger = logging.getLogger(__name__)
+        logger.info("Using BirdNET legacy module approach")
     except ImportError as e:
         print(f"Error importing BirdNET modules: {e}")
         sys.exit(1)
@@ -37,6 +49,7 @@ CORS(app)
 # Global variables for model
 MODEL_PATH = None
 LABELS_FILE = "/app/BirdNET-Analyzer/labels/V2.4/BirdNET_GLOBAL_6K_V2.4_Labels.txt"
+analyzer = None
 
 def load_species_list():
     """Load species list from labels file"""
@@ -108,58 +121,81 @@ def analyze_audio():
 def analyze_audio_file(audio_path, min_conf):
     """Analyze audio file using BirdNET"""
     try:
-        # Get species list
-        species_list = load_species_list()
-        
-        # Run BirdNET analysis
-        # This calls the analyze.py script functionality
         detections = []
         
-        # Set analysis parameters
-        analyze.LATITUDE = 51.1694  # Nur-Sultan/Astana, Kazakhstan
-        analyze.LONGITUDE = 71.4491
-        analyze.WEEK = -1  # Use all weeks
-        analyze.OVERLAP = 0.0
-        analyze.SENSITIVITY = 1.0
-        analyze.MIN_CONFIDENCE = min_conf
-        analyze.SIGMOID_SENSITIVITY = 1.0
+        if BIRDNET_PACKAGE and analyzer:
+            # Use birdnetlib package
+            from birdnetlib import Recording
+            
+            recording = Recording(
+                analyzer,
+                audio_path,
+                lat=51.1694,  # Nur-Sultan/Astana, Kazakhstan
+                lon=71.4491,
+                date="2024-01-01",  # Default date
+                min_conf=min_conf
+            )
+            recording.analyze()
+            
+            for detection in recording.detections:
+                detections.append({
+                    "species": f"{detection['common_name']}_{detection['scientific_name']}",
+                    "common_name": detection['common_name'],
+                    "scientific_name": detection['scientific_name'],
+                    "confidence": float(detection['confidence']),
+                    "start_time": float(detection['start_time']),
+                    "end_time": float(detection['end_time'])
+                })
         
-        # Load and run model
-        if MODEL_PATH and os.path.exists(MODEL_PATH):
-            # Process audio file
-            sig, rate = analyze.openAudioFile(audio_path, 48000)
+        else:
+            # Use legacy analyze module
+            species_list = load_species_list()
             
-            # Get audio chunks
-            chunks = analyze.getAudioChunks(sig, rate)
+            # Set analysis parameters
+            analyze.LATITUDE = 51.1694  # Nur-Sultan/Astana, Kazakhstan
+            analyze.LONGITUDE = 71.4491
+            analyze.WEEK = -1  # Use all weeks
+            analyze.OVERLAP = 0.0
+            analyze.SENSITIVITY = 1.0
+            analyze.MIN_CONFIDENCE = min_conf
+            analyze.SIGMOID_SENSITIVITY = 1.0
             
-            # Analyze each chunk
-            for chunk_index, chunk in enumerate(chunks):
-                # Get prediction
-                p = analyze.predict(chunk, analyze.SIGMOID_SENSITIVITY)
+            # Load and run model
+            if MODEL_PATH and os.path.exists(MODEL_PATH):
+                # Process audio file
+                sig, rate = analyze.openAudioFile(audio_path, 48000)
                 
-                # Get species with confidence above threshold
-                p_filtered = analyze.filterPredictions(p, analyze.SENSITIVITY)
+                # Get audio chunks
+                chunks = analyze.getAudioChunks(sig, rate)
                 
-                # Convert predictions to results
-                for i in range(len(p_filtered)):
-                    if p_filtered[i] >= min_conf:
-                        species_name = species_list[i] if i < len(species_list) else f"Unknown_{i}"
-                        
-                        # Parse common and scientific names
-                        if '_' in species_name:
-                            common_name, scientific_name = species_name.split('_', 1)
-                        else:
-                            common_name = species_name
-                            scientific_name = ""
-                        
-                        detections.append({
-                            "species": species_name,
-                            "common_name": common_name,
-                            "scientific_name": scientific_name,
-                            "confidence": float(p_filtered[i]),
-                            "start_time": chunk_index * 3.0,  # 3 second chunks
-                            "end_time": (chunk_index + 1) * 3.0
-                        })
+                # Analyze each chunk
+                for chunk_index, chunk in enumerate(chunks):
+                    # Get prediction
+                    p = analyze.predict(chunk, analyze.SIGMOID_SENSITIVITY)
+                    
+                    # Get species with confidence above threshold
+                    p_filtered = analyze.filterPredictions(p, analyze.SENSITIVITY)
+                    
+                    # Convert predictions to results
+                    for i in range(len(p_filtered)):
+                        if p_filtered[i] >= min_conf:
+                            species_name = species_list[i] if i < len(species_list) else f"Unknown_{i}"
+                            
+                            # Parse common and scientific names
+                            if '_' in species_name:
+                                common_name, scientific_name = species_name.split('_', 1)
+                            else:
+                                common_name = species_name
+                                scientific_name = ""
+                            
+                            detections.append({
+                                "species": species_name,
+                                "common_name": common_name,
+                                "scientific_name": scientific_name,
+                                "confidence": float(p_filtered[i]),
+                                "start_time": chunk_index * 3.0,  # 3 second chunks
+                                "end_time": (chunk_index + 1) * 3.0
+                            })
         
         # Sort by confidence
         detections.sort(key=lambda x: x['confidence'], reverse=True)
@@ -191,8 +227,15 @@ if __name__ == '__main__':
     
     # Initialize BirdNET
     try:
-        analyze.loadModel(MODEL_PATH)
-        logger.info("BirdNET model loaded successfully")
+        if BIRDNET_PACKAGE:
+            # Initialize birdnetlib analyzer
+            from birdnetlib.analyzer import Analyzer
+            analyzer = Analyzer()
+            logger.info("BirdNET package analyzer loaded successfully")
+        else:
+            # Initialize legacy analyze module
+            analyze.loadModel(MODEL_PATH)
+            logger.info("BirdNET legacy model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load BirdNET model: {e}")
         sys.exit(1)
