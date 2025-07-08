@@ -39,10 +39,33 @@ serve(async (req: Request) => {
       .update({ status: 'processing' })
       .eq('id', audioId);
 
-    // Create signed URL for the audio file (valid for 5 minutes)
+    // Verify the file exists in storage before creating signed URL
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from('audio-clips')
+      .download(storagePath);
+
+    if (fileError) {
+      console.error('Error verifying file exists:', fileError);
+      await supabase
+        .from('audio_uploads')
+        .update({ status: 'failed' })
+        .eq('id', audioId);
+      
+      return new Response(
+        JSON.stringify({ error: `File not found in storage: ${fileError.message}` }),
+        { 
+          status: 404, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log(`File verified in storage: ${fileData?.size} bytes`);
+
+    // Create signed URL for the audio file (valid for 10 minutes)
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('audio-clips')
-      .createSignedUrl(storagePath, 300); // 5 minutes
+      .createSignedUrl(storagePath, 600); // 10 minutes
 
     if (signedUrlError) {
       console.error('Error creating signed URL:', signedUrlError);
@@ -59,6 +82,8 @@ serve(async (req: Request) => {
         }
       );
     }
+
+    console.log(`Created signed URL: ${signedUrlData.signedUrl}`);
 
     // Call BirdNET API
     const birdnetUrl = Deno.env.get('BIRDNET_URL');
@@ -79,15 +104,26 @@ serve(async (req: Request) => {
       }),
     });
 
+    const responseText = await birdnetResponse.text();
+    console.log(`BirdNET response status: ${birdnetResponse.status}`);
+    console.log(`BirdNET response: ${responseText}`);
+
     if (!birdnetResponse.ok) {
-      console.error(`BirdNET API error: ${birdnetResponse.status}`);
+      console.error(`BirdNET API error: ${birdnetResponse.status} - ${responseText}`);
       await supabase
         .from('audio_uploads')
-        .update({ status: 'failed' })
+        .update({ 
+          status: 'failed',
+          error_message: `BirdNET API error: ${birdnetResponse.status}`
+        })
         .eq('id', audioId);
       
       return new Response(
-        JSON.stringify({ error: 'BirdNET analysis failed' }),
+        JSON.stringify({ 
+          error: 'BirdNET analysis failed',
+          details: responseText,
+          status: birdnetResponse.status
+        }),
         { 
           status: 502, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -95,12 +131,32 @@ serve(async (req: Request) => {
       );
     }
 
-    const predictions = await birdnetResponse.json();
-    console.log(`BirdNET returned ${predictions.length} detections`);
+    let predictions;
+    try {
+      predictions = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Error parsing BirdNET response:', parseError);
+      await supabase
+        .from('audio_uploads')
+        .update({ status: 'failed' })
+        .eq('id', audioId);
+      
+      return new Response(
+        JSON.stringify({ error: 'Invalid response from BirdNET API' }),
+        { 
+          status: 502, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Handle both direct results array and wrapped response
+    const results = predictions.results || predictions;
+    console.log(`BirdNET returned ${results.length} detections`);
 
     // Insert detection results into database
-    if (predictions.length > 0) {
-      const detections = predictions.map((prediction: any) => ({
+    if (results.length > 0) {
+      const detections = results.map((prediction: any) => ({
         audio_id: audioId,
         species: prediction.species || prediction.common_name,
         confidence: prediction.confidence,
@@ -140,7 +196,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        detections: predictions.length,
+        detections: results.length,
         audioId 
       }),
       { 

@@ -12,6 +12,8 @@ export interface AudioUpload {
   path: string;
   recorded_at: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
+  file_size?: number;
+  error_message?: string;
 }
 
 /**
@@ -42,6 +44,21 @@ export interface BirdNetPrediction {
 export type RecordingStatus = 'idle' | 'recording' | 'processing' | 'completed' | 'error';
 
 /**
+ * Permission status type for better error handling
+ */
+export type PermissionStatus = 'granted' | 'denied' | 'undetermined' | 'blocked';
+
+/**
+ * Enhanced error interface for detailed error reporting
+ */
+export interface RecordingError {
+  code: string;
+  message: string;
+  details?: string;
+  isRecoverable: boolean;
+}
+
+/**
  * Audio recorder hook return type
  */
 export interface AudioRecorderHook {
@@ -49,9 +66,13 @@ export interface AudioRecorderHook {
   recordingStatus: RecordingStatus;
   duration: number;
   uri: string | null;
+  permissionStatus?: PermissionStatus;
+  lastError?: RecordingError | null;
   start: () => Promise<void>;
   stop: (userId: string) => Promise<string>;
   reset: () => void;
+  checkPermissions?: () => Promise<PermissionStatus>;
+  requestPermissions?: () => Promise<boolean>;
 }
 
 /**
