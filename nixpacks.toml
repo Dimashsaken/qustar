@@ -11,7 +11,7 @@ cmds = ["npm install --legacy-peer-deps"]
 
 # Build phase – generate static web output using Expo export
 [phases.build]
-cmds = ["npx expo install --fix", "EXPO_NO_CACHE=1 NODE_ENV=production npm run build:web"]
+cmds = ["EXPO_NO_CACHE=1 NODE_ENV=production npm run build:web"]
 
 # Start phase – serve the static build
 [start]
