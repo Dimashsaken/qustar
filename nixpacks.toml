@@ -7,7 +7,7 @@ PORT = "8080"  # Railway will override this at runtime
 
 # Installation phase – rely on default Node provider install but ensure clean install
 [phases.install]
-cmds = ["npm ci --legacy-peer-deps"]
+cmds = ["npm install --legacy-peer-deps"]
 
 # Build phase – generate static web output using Expo export
 [phases.build]
