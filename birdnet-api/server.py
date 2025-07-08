@@ -132,7 +132,7 @@ def analyze_audio_file(audio_path, min_conf):
                 audio_path,
                 lat=51.1694,  # Nur-Sultan/Astana, Kazakhstan
                 lon=71.4491,
-                date="2024-01-01",  # Default date
+                date=datetime(2024, 1, 1),  # Default date as datetime object
                 min_conf=min_conf
             )
             recording.analyze()
