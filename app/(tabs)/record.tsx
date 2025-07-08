@@ -7,8 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Modal,
   Platform,
   Pressable,
   StatusBar as RNStatusBar,
@@ -18,6 +19,7 @@ import {
   Text,
   View
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { AudioDetectionGroup } from '../../components/AudioDetectionGroup';
 import { ThemedText } from '../../components/ThemedText';
@@ -99,52 +101,7 @@ const PermissionBanner = ({
   );
 };
 
-/**
- * Error Display Component
- * Shows detailed error information with recovery actions
- */
-const ErrorDisplay = ({ 
-  error,
-  onRetry,
-  onDismiss 
-}: { 
-  error: any;
-  onRetry?: () => void;
-  onDismiss: () => void;
-}) => {
-  if (!error) return null;
 
-  return (
-    <View style={styles.errorContainer}>
-      <View style={styles.errorHeader}>
-        <Ionicons name="alert-circle" size={24} color="#E74C3C" />
-        <Text style={styles.errorTitle}>{error.message}</Text>
-      </View>
-      
-      {error.details && (
-        <Text style={styles.errorDetails}>{error.details}</Text>
-      )}
-      
-      <View style={styles.errorActions}>
-        <Pressable
-          style={[styles.errorButton, styles.dismissButton]}
-          onPress={onDismiss}
-        >
-          <Text style={styles.dismissButtonText}>Dismiss</Text>
-        </Pressable>
-        
-        {error.isRecoverable && onRetry && (
-          <Pressable
-            style={[styles.errorButton, styles.retryButton]}
-            onPress={onRetry}
-          >
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </Pressable>
-        )}
-      </View>
-    </View>
-  );
-};
 
 /**
  * Main Recording Button Component
@@ -228,12 +185,122 @@ const RecordingButton = ({
 };
 
 /**
+ * Recording Guide Modal Component
+ * Shows simple instructions for optimal bird recording with bottom sheet animation
+ */
+const RecordingGuideModal = ({ 
+  visible, 
+  onClose 
+}: { 
+  visible: boolean; 
+  onClose: () => void;
+}) => {
+  // Animation values
+  const backgroundOpacity = useSharedValue(0);
+  const bottomSheetTranslateY = useSharedValue(500);
+
+  /**
+   * Handle animation when visibility changes
+   */
+  useEffect(() => {
+    if (visible) {
+      // Fade in background
+      backgroundOpacity.value = withTiming(1, { duration: 300 });
+      // Slide up bottom sheet
+      bottomSheetTranslateY.value = withSpring(0, {
+        damping: 15,
+        stiffness: 150,
+      });
+    } else {
+      // Fade out background
+      backgroundOpacity.value = withTiming(0, { duration: 200 });
+      // Slide down bottom sheet
+      bottomSheetTranslateY.value = withSpring(500, {
+        damping: 20,
+        stiffness: 200,
+      });
+    }
+  }, [visible]);
+
+  /**
+   * Animated style for background opacity
+   */
+  const backgroundAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: backgroundOpacity.value,
+    };
+  });
+
+  /**
+   * Animated style for bottom sheet slide up
+   */
+  const bottomSheetAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateY: bottomSheetTranslateY.value },
+      ],
+    };
+  });
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="none" // Disable default animation
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        {/* Animated background area */}
+        <Animated.View style={[styles.modalBackgroundArea, backgroundAnimatedStyle]}>
+          <Pressable style={styles.modalBackgroundPressable} onPress={onClose} />
+        </Animated.View>
+        
+        {/* Animated bottom sheet content */}
+        <Animated.View style={[styles.modalBottomSheet, bottomSheetAnimatedStyle]}>
+          {/* Drag handle */}
+          <View style={styles.modalDragHandle} />
+          
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Как записывать птиц</Text>
+            <Pressable style={styles.modalCloseButton} onPress={onClose}>
+              <Text style={styles.modalCloseIcon}>✕</Text>
+            </Pressable>
+          </View>
+
+          {/* Simple Guide Content */}
+          <View style={styles.simpleModalContent}>
+            <View style={styles.simpleTip}>
+              <Text style={styles.simpleTipNumber}>1</Text>
+              <Text style={styles.simpleTipText}>Записывайте 10-30 секунд в тихом месте</Text>
+            </View>
+            
+            <View style={styles.simpleTip}>
+              <Text style={styles.simpleTipNumber}>2</Text>
+              <Text style={styles.simpleTipText}>Лучшее время: утром (5:00-10:00) или вечером (17:00-19:00)</Text>
+            </View>
+            
+            <View style={styles.simpleTip}>
+              <Text style={styles.simpleTipNumber}>3</Text>
+              <Text style={styles.simpleTipText}>Направьте телефон в сторону звука птицы</Text>
+            </View>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
+/**
  * Main Recording Screen Component
  */
 export default function RecordScreen() {
   const { user, loading, isAuthenticated } = useAuth();
   const recorder = useBirdnetRecorder();
   const { detections, isLoading: detectionsLoading, forceRefetch, getGroupedDetections } = useAudioDetections();
+  const [isRecordingGuideModalVisible, setIsRecordingGuideModalVisible] = useState(false);
+  const [showNoBirdsMessage, setShowNoBirdsMessage] = useState(false);
+  const [detectionCount, setDetectionCount] = useState(0);
   
   // Only redirect if loading is complete and user is not authenticated
   useEffect(() => {
@@ -242,13 +309,39 @@ export default function RecordScreen() {
     }
   }, [loading, isAuthenticated]);
 
-  // Force refresh detections when recording is completed
+  // Track detection count to detect new birds
+  useEffect(() => {
+    setDetectionCount(detections.length);
+  }, [detections.length]);
+
+  // Monitor for new detections after recording completes
   useEffect(() => {
     if (recorder.recordingStatus === 'completed') {
-      console.log('🔄 Recording completed, refreshing detections...');
-      forceRefetch();
+      console.log('🔄 Recording completed, checking for new detections...');
+      const initialCount = detectionCount;
+      
+      // Wait for analysis to complete and check for new detections
+      const checkForNewDetections = () => {
+        setTimeout(async () => {
+          await forceRefetch();
+          
+          // Check again after a delay to ensure analysis is complete
+          setTimeout(() => {
+            const currentCount = detections.length;
+            console.log(`Detection count: ${initialCount} -> ${currentCount}`);
+            
+            if (currentCount === initialCount) {
+              // No new detections found
+              console.log('⚠️ No new birds detected');
+              setShowNoBirdsMessage(true);
+            }
+          }, 3000); // Wait 3 seconds for analysis
+        }, 2000); // Initial delay for processing
+      };
+      
+      checkForNewDetections();
     }
-  }, [recorder.recordingStatus, forceRefetch]);
+  }, [recorder.recordingStatus, detectionCount, forceRefetch, detections.length]);
 
   /**
    * Handle recording start/stop toggle with better error handling
@@ -265,7 +358,8 @@ export default function RecordScreen() {
         // Error is now handled by the hook's error state
       }
     } else {
-      // Start recording
+      // Start recording - reset no birds message
+      setShowNoBirdsMessage(false);
       try {
         await recorder.start();
       } catch (error) {
@@ -281,24 +375,6 @@ export default function RecordScreen() {
   const handleRequestPermissions = async () => {
     if (recorder.requestPermissions) {
       await recorder.requestPermissions();
-    }
-  };
-
-  /**
-   * Handle error retry
-   */
-  const handleRetryAfterError = () => {
-    if (recorder.reset) {
-      recorder.reset();
-    }
-  };
-
-  /**
-   * Handle error dismissal
-   */
-  const handleDismissError = () => {
-    if (recorder.reset) {
-      recorder.reset();
     }
   };
 
@@ -331,6 +407,12 @@ export default function RecordScreen() {
       {/* Header */}
       <ThemedView {...(Platform.OS === 'android' ? { surface: 'surface' as const } : {})} style={styles.header}>
         <ThemedText style={styles.title}>Запись</ThemedText>
+        <Pressable 
+          onPress={() => setIsRecordingGuideModalVisible(true)}
+          style={styles.helpButton}
+        >
+          <Ionicons name="help-circle" size={32} color={Colors.light.tint} />
+        </Pressable>
       </ThemedView>
 
       {/* Main Content */}
@@ -345,12 +427,7 @@ export default function RecordScreen() {
           onRequestPermissions={handleRequestPermissions}
         />
 
-        {/* Error Display */}
-        <ErrorDisplay
-          error={recorder.lastError}
-          onRetry={handleRetryAfterError}
-          onDismiss={handleDismissError}
-        />
+
 
         {/* Large Recording Button */}
         <RecordingButton
@@ -374,11 +451,11 @@ export default function RecordScreen() {
 
         {recorder.recordingStatus === 'completed' && (
           <View style={styles.statusContainer}>
-            <ThemedText style={[styles.statusText, { color: '#27AE60' }]}>
-              Запись обработана!
+            <ThemedText style={[styles.statusText, { color: showNoBirdsMessage ? '#F39C12' : '#27AE60' }]}>
+              {showNoBirdsMessage ? 'Птицы не обнаружены' : 'Запись обработана!'}
             </ThemedText>
             <ThemedText style={styles.statusSubtext}>
-              Проверьте результаты ниже
+              {showNoBirdsMessage ? 'Попробуйте записать в другом месте или времени' : 'Проверьте результаты ниже'}
             </ThemedText>
           </View>
         )}
@@ -420,6 +497,12 @@ export default function RecordScreen() {
             </>
           ) : (
             <View style={styles.emptyStateContainer}>
+              <Ionicons 
+                name="mic-outline" 
+                size={64} 
+                color={Colors.light.tint} 
+                style={styles.emptyStateIcon} 
+              />
               <Text style={styles.emptyStateText}>
                 Пока нет записей
               </Text>
@@ -430,6 +513,10 @@ export default function RecordScreen() {
           )}
         </View>
       </ScrollView>
+      <RecordingGuideModal
+        visible={isRecordingGuideModalVisible}
+        onClose={() => setIsRecordingGuideModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -451,12 +538,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: Colors.light.text,
     paddingTop: 10,
+  },
+  helpButton: {
+    padding: 8,
   },
   scrollContent: {
     flex: 1,
@@ -507,61 +600,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Error Display Styles
-  errorContainer: {
-    backgroundColor: '#FFEBEE',
-    borderLeftWidth: 4,
-    borderLeftColor: '#E74C3C',
-    borderRadius: 8,
-    padding: DesignTokens.spacing.md,
-    marginVertical: DesignTokens.spacing.md,
-  },
-  errorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: DesignTokens.spacing.sm,
-  },
-  errorTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E74C3C',
-    marginLeft: DesignTokens.spacing.sm,
-    flex: 1,
-  },
-  errorDetails: {
-    fontSize: 14,
-    color: Colors.light.text,
-    opacity: 0.8,
-    marginBottom: DesignTokens.spacing.md,
-  },
-  errorActions: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.sm,
-  },
-  errorButton: {
-    paddingHorizontal: DesignTokens.spacing.md,
-    paddingVertical: DesignTokens.spacing.sm,
-    borderRadius: 6,
-    flex: 1,
-  },
-  dismissButton: {
-    backgroundColor: '#BDC3C7',
-  },
-  retryButton: {
-    backgroundColor: '#E74C3C',
-  },
-  dismissButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
+
 
   // Recording Button Styles
   buttonContainer: {
@@ -653,6 +692,10 @@ const styles = StyleSheet.create({
     padding: DesignTokens.spacing.xl,
     alignItems: 'center',
   },
+  emptyStateIcon: {
+    marginBottom: DesignTokens.spacing.md,
+    opacity: 0.6,
+  },
   emptyStateText: {
     fontSize: 18,
     fontWeight: '500',
@@ -666,5 +709,90 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     textAlign: 'center',
     lineHeight: 20,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  modalBackgroundArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 1,
+  },
+  modalBackgroundPressable: {
+    flex: 1,
+  },
+  modalBottomSheet: {
+    backgroundColor: Colors.light.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: '40%',
+    paddingTop: DesignTokens.spacing.md,
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingBottom: DesignTokens.spacing.xl * 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 2,
+  },
+  modalDragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.light.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: DesignTokens.spacing.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: DesignTokens.spacing.md,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+  },
+  modalCloseButton: {
+    padding: DesignTokens.spacing.sm,
+  },
+  modalCloseIcon: {
+    fontSize: 24,
+    color: Colors.light.text,
+  },
+
+  // Simple Modal Styles
+  simpleModalContent: {
+    flex: 1,
+    paddingVertical: DesignTokens.spacing.lg,
+  },
+  simpleTip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: DesignTokens.spacing.xl,
+    paddingHorizontal: DesignTokens.spacing.md,
+  },
+  simpleTipNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.light.tint,
+    marginRight: DesignTokens.spacing.md,
+    minWidth: 32,
+  },
+  simpleTipText: {
+    fontSize: 18,
+    color: Colors.light.text,
+    flex: 1,
+    lineHeight: 24,
   },
 }); 
