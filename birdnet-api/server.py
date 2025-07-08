@@ -15,7 +15,7 @@ from flask_cors import CORS
 import logging
 
 # Add BirdNET modules to path
-sys.path.append('/app')
+sys.path.extend(['/app/BirdNET-Analyzer', '/app'])
 try:
     import analyze
     import species
@@ -32,7 +32,7 @@ CORS(app)
 
 # Global variables for model
 MODEL_PATH = None
-LABELS_FILE = "/app/labels/V2.4/BirdNET_GLOBAL_6K_V2.4_Labels.txt"
+LABELS_FILE = "/app/BirdNET-Analyzer/labels/V2.4/BirdNET_GLOBAL_6K_V2.4_Labels.txt"
 
 def load_species_list():
     """Load species list from labels file"""

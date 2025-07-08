@@ -10,7 +10,7 @@ COPY birdnet-api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Clone BirdNET-Analyzer
-RUN git clone --depth 1 https://github.com/birdnet-team/BirdNET-Analyzer .
+RUN git clone --depth 1 https://github.com/birdnet-team/BirdNET-Analyzer BirdNET-Analyzer
 
 # Copy our server file
 COPY birdnet-api/server.py .
@@ -18,4 +18,4 @@ COPY birdnet-api/server.py .
 ENV PORT=8080 
 # 8080 for local dev; Railway injects a real port at runtime
 EXPOSE $PORT
-CMD ["bash", "-c", "python server.py --model models/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite --port $PORT"]
+CMD ["bash", "-c", "python server.py --model BirdNET-Analyzer/models/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite --port $PORT"]
