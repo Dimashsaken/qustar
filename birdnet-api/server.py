@@ -14,14 +14,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
 
-# Add BirdNET modules to path
-sys.path.extend(['/app/BirdNET-Analyzer', '/app'])
+# Add BirdNET modules to path (support both >=v2 package and legacy flat structure)
 try:
-    import analyze
-    import species
-except ImportError as e:
-    print(f"Error importing BirdNET modules: {e}")
-    sys.exit(1)
+    from birdnet_analyzer import analyze, species  # Newer package layout
+except ImportError:
+    # Fallback to legacy layout (analyze.py & species.py in repo root)
+    sys.path.extend(["/app/BirdNET-Analyzer", "/app"])
+    try:
+        import analyze  # type: ignore
+        import species  # type: ignore
+    except ImportError as e:
+        print(f"Error importing BirdNET modules: {e}")
+        sys.exit(1)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

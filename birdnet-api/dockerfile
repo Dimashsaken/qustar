@@ -10,7 +10,8 @@ COPY birdnet-api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Clone BirdNET-Analyzer
-RUN git clone --depth 1 https://github.com/birdnet-team/BirdNET-Analyzer BirdNET-Analyzer
+RUN git clone --depth 1 https://github.com/birdnet-team/BirdNET-Analyzer BirdNET-Analyzer \
+ && pip install --no-cache-dir ./BirdNET-Analyzer
 
 # Copy our server file
 COPY birdnet-api/server.py .
