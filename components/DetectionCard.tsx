@@ -1,6 +1,6 @@
 /**
- * Enhanced Detection Card Component
- * Displays bird detection results with rich bird information, images, and metadata
+ * Simplified Detection Card Component
+ * Displays bird detection results with basic information
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, DesignTokens } from '../constants/Colors';
-import { useBirdBySpeciesName, useBirdImageUrls } from '../hooks/useBirds';
+import { useBirdBySpeciesName } from '../hooks/useBirds';
 import type { DetectionWithAudio } from '../types/audio';
 import { BirdImage } from './BirdImage';
 import { ThemedText } from './ThemedText';
@@ -21,105 +21,24 @@ interface DetectionCardProps {
 }
 
 /**
- * Fallback dictionary for common bird species in Russian
- * Used when bird data isn't found in database
- */
-const RUSSIAN_BIRD_NAMES: Record<string, string> = {
-  // Common birds that might be detected by BirdNet
-  'Turdus merula': 'Чёрный дрозд',
-  'Turdus pilaris': 'Рябинник',
-  'Turdus philomelos': 'Певчий дрозд',
-  'Passer domesticus': 'Домовый воробей',
-  'Passer montanus': 'Полевой воробей',
-  'Corvus cornix': 'Серая ворона',
-  'Corvus corax': 'Ворон',
-  'Pica pica': 'Сорока',
-  'Sturnus vulgaris': 'Обыкновенный скворец',
-  'Hirundo rustica': 'Деревенская ласточка',
-  'Delichon urbicum': 'Городская ласточка',
-  'Parus major': 'Большая синица',
-  'Cyanistes caeruleus': 'Обыкновенная лазоревка',
-  'Erithacus rubecula': 'Зарянка',
-  'Phoenicurus phoenicurus': 'Горихвостка',
-  'Muscicapa striata': 'Серая мухоловка',
-  'Sylvia atricapilla': 'Черноголовая славка',
-  'Phylloscopus collybita': 'Теньковка',
-  'Phylloscopus trochilus': 'Весничка',
-  'Acrocephalus scirpaceus': 'Тростниковая камышевка',
-  'Motacilla alba': 'Белая трясогузка',
-  'Anthus trivialis': 'Лесной конёк',
-  'Fringilla coelebs': 'Зяблик',
-  'Carduelis carduelis': 'Щегол',
-  'Chloris chloris': 'Зеленушка',
-  'Acanthis flammea': 'Чечётка',
-  'Pyrrhula pyrrhula': 'Снегирь',
-  'Emberiza citrinella': 'Обыкновенная овсянка',
-  'Alauda arvensis': 'Полевой жаворонок',
-  'Galerida cristata': 'Хохлатый жаворонок',
-  'Columba livia': 'Сизый голубь',
-  'Streptopelia decaocto': 'Кольчатая горлица',
-  'Cuculus canorus': 'Обыкновенная кукушка',
-  'Falco tinnunculus': 'Обыкновенная пустельга',
-  'Accipiter nisus': 'Перепелятник',
-  'Buteo buteo': 'Канюк',
-  'Ardea cinerea': 'Серая цапля',
-  'Fulica atra': 'Лысуха',
-  'Gallinula chloropus': 'Камышница',
-  'Anas platyrhynchos': 'Кряква',
-  'Poecile palustris': 'Буроголовая гаичка',
-  'Poecile montanus': 'Пухляк',
-  'Sitta europaea': 'Поползень',
-  'Certhia brachydactyla': 'Короткопалая пищуха',
-  'Troglodytes troglodytes': 'Крапивник',
-};
-
-/**
- * Enhanced card component for displaying bird detection results
+ * Simplified card component for displaying bird detection results
  */
 export const DetectionCard: React.FC<DetectionCardProps> = ({ 
   detection, 
   onPress 
 }) => {
   const { data: birdData } = useBirdBySpeciesName(detection.detection.species);
-  const { data: imageUrls = [] } = useBirdImageUrls(
-    birdData?.id || '', 
-    birdData?.scientific_name
-  );
-
-  const confidencePercentage = Math.round(detection.detection.confidence * 100);
-  const recordedDate = new Date(detection.audioUpload.recorded_at);
   
-  // Get display names with fallbacks
+  const confidencePercentage = Math.round(detection.detection.confidence * 100);
+  
+  // Get display name with simple fallback
   const getDisplayName = () => {
     if (birdData) {
-      // Prioritize Russian name only, with fallbacks
       return birdData.common_name_ru || birdData.common_name_en || birdData.scientific_name;
     }
     
-    // If no bird data found, try fallback dictionary first
-    const speciesName = detection.detection.species.replace(/_/g, ' ');
-    const russianName = RUSSIAN_BIRD_NAMES[speciesName];
-    
-    if (russianName) {
-      return russianName;
-    }
-    
-    // Final fallback: format the scientific name nicely
-    return speciesName;
-  };
-
-  const getScientificName = () => {
-    if (birdData?.scientific_name) {
-      return birdData.scientific_name;
-    }
-    
-    // Show scientific name from detection
-    const speciesName = detection.detection.species.replace(/_/g, ' ');
-    const russianName = RUSSIAN_BIRD_NAMES[speciesName];
-    
-    // If we found a Russian name, show the scientific name in subtitle
-    // If not, indicate we're searching
-    return russianName ? speciesName : `${speciesName} (поиск в базе...)`;
+    // Simple fallback: format the species name
+    return detection.detection.species.replace(/_/g, ' ');
   };
 
   const handlePress = () => {
@@ -150,7 +69,7 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
             />
           ) : (
             <View style={styles.placeholderImage}>
-              <Ionicons name="musical-note" size={32} color={Colors.light.tabIconDefault} />
+              <Ionicons name="musical-note" size={24} color={Colors.light.tabIconDefault} />
             </View>
           )}
           
@@ -165,59 +84,22 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
 
         {/* Bird Information */}
         <View style={styles.content}>
-          <View style={styles.header}>
-            <ThemedText style={styles.birdName} numberOfLines={1}>
-              {getDisplayName()}
-            </ThemedText>
-            
-            {/* Audio Indicator */}
-            <View style={styles.audioIndicator}>
-              <Ionicons name="volume-medium" size={16} color={Colors.light.tint} />
-            </View>
-          </View>
-
-          <ThemedText style={styles.scientificName} numberOfLines={1}>
-            {getScientificName()}
+          <ThemedText style={styles.birdName} numberOfLines={2}>
+            {getDisplayName()}
           </ThemedText>
-
-          {/* Bird Details */}
-          {birdData && (
-            <View style={styles.detailsRow}>
-              {birdData.family && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Семейство:</Text>
-                  <Text style={styles.detailValue}>{birdData.family}</Text>
-                </View>
-              )}
-              {birdData.size && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Размер:</Text>
-                  <Text style={styles.detailValue}>{birdData.size}</Text>
-                </View>
-              )}
-            </View>
+          
+          {birdData?.scientific_name && (
+            <ThemedText style={styles.scientificName} numberOfLines={1}>
+              {birdData.scientific_name}
+            </ThemedText>
           )}
-
-          {/* Recording Metadata */}
-          <View style={styles.metadata}>
-            <View style={styles.metadataItem}>
-              <Ionicons name="time-outline" size={14} color={Colors.light.tabIconDefault} />
-              <Text style={styles.metadataText}>
-                {recordedDate.toLocaleDateString('ru-RU', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </Text>
-            </View>
-            
-            <View style={styles.metadataItem}>
-              <Ionicons name="timer-outline" size={14} color={Colors.light.tabIconDefault} />
-              <Text style={styles.metadataText}>
-                {detection.detection.start_sec.toFixed(1)}-{detection.detection.end_sec.toFixed(1)}s
-              </Text>
-            </View>
+          
+          {/* Detection Time */}
+          <View style={styles.timeContainer}>
+            <Ionicons name="time-outline" size={12} color={Colors.light.tabIconDefault} />
+            <ThemedText style={styles.timeText}>
+              {formatDetectionTime(detection.detection.start_sec, detection.detection.end_sec)}
+            </ThemedText>
           </View>
         </View>
 
@@ -243,6 +125,22 @@ const getConfidenceColor = (percentage: number): string => {
   return '#E74C3C'; // Red
 };
 
+/**
+ * Format detection time range as readable string
+ */
+const formatDetectionTime = (startSec: number, endSec: number): string => {
+  const formatTime = (seconds: number): string => {
+    if (seconds < 60) {
+      return `${seconds.toFixed(1)}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toFixed(1).padStart(4, '0')}`;
+  };
+  
+  return `${formatTime(startSec)} - ${formatTime(endSec)}`;
+};
+
 const styles = StyleSheet.create({
   container: {
     marginVertical: DesignTokens.spacing.xs,
@@ -254,7 +152,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.border,
     backgroundColor: Colors.light.background,
-    ...DesignTokens.shadows.card,
   },
   
   // Image Section
@@ -263,13 +160,13 @@ const styles = StyleSheet.create({
     marginRight: DesignTokens.spacing.md,
   },
   birdImage: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
     borderRadius: 8,
   },
   placeholderImage: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
     borderRadius: 8,
     backgroundColor: Colors.light.surfaceAlt,
     justifyContent: 'center',
@@ -296,64 +193,28 @@ const styles = StyleSheet.create({
   // Content Section
   content: {
     flex: 1,
-    justifyContent: 'space-between',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
+    justifyContent: 'center',
   },
   birdName: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.light.text,
-    flex: 1,
-  },
-  audioIndicator: {
-    marginLeft: DesignTokens.spacing.xs,
+    marginBottom: 4,
   },
   scientificName: {
     fontSize: 13,
     fontStyle: 'italic',
     color: Colors.light.tabIconDefault,
-    marginBottom: DesignTokens.spacing.xs,
   },
-  
-  // Details Section
-  detailsRow: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.md,
-    marginBottom: DesignTokens.spacing.xs,
-  },
-  detailItem: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 11,
-    color: Colors.light.tabIconDefault,
-    fontWeight: '500',
-  },
-  detailValue: {
-    fontSize: 12,
-    color: Colors.light.text,
-    fontWeight: '400',
-  },
-
-  // Metadata Section
-  metadata: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.md,
-    marginTop: DesignTokens.spacing.xs,
-  },
-  metadataItem: {
+  timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    marginTop: 4,
   },
-  metadataText: {
-    fontSize: 11,
+  timeText: {
+    fontSize: 12,
     color: Colors.light.tabIconDefault,
+    marginLeft: 4,
   },
 
   // Arrow Section

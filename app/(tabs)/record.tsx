@@ -9,7 +9,6 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import {
-  Alert,
   Platform,
   Pressable,
   StatusBar as RNStatusBar,
@@ -20,8 +19,7 @@ import {
   View
 } from 'react-native';
 
-import { DetectionCard } from '../../components/DetectionCard';
-import { DetectionSummary } from '../../components/DetectionSummary';
+import { AudioDetectionGroup } from '../../components/AudioDetectionGroup';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { Colors, DesignTokens } from '../../constants/Colors';
@@ -29,7 +27,6 @@ import { useAudioDetections } from '../../hooks/useAudioDetections';
 import { useAuth } from '../../hooks/useAuth';
 import { useBirdnetRecorder } from '../../hooks/useBirdnetRecorder';
 import { useThemeColor } from '../../hooks/useThemeColor';
-import type { DetectionWithAudio } from '../../types/audio';
 
 /**
  * Permission Status Banner Component
@@ -236,7 +233,7 @@ const RecordingButton = ({
 export default function RecordScreen() {
   const { user, loading, isAuthenticated } = useAuth();
   const recorder = useBirdnetRecorder();
-  const { detections, isLoading: detectionsLoading, forceRefetch } = useAudioDetections();
+  const { detections, isLoading: detectionsLoading, forceRefetch, getGroupedDetections } = useAudioDetections();
   
   // Only redirect if loading is complete and user is not authenticated
   useEffect(() => {
@@ -323,6 +320,9 @@ export default function RecordScreen() {
 
   const isRecording = recorder.recordingStatus === 'recording';
   const isDisabled = recorder.recordingStatus === 'processing';
+  
+  // Get grouped detections for organized display
+  const groupedDetections = getGroupedDetections();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -364,7 +364,7 @@ export default function RecordScreen() {
         {recorder.recordingStatus === 'processing' && (
           <View style={styles.statusContainer}>
             <ThemedText style={styles.statusText}>
-              🔍 Обрабатываем запись...
+              Обрабатываем запись...
             </ThemedText>
             <ThemedText style={styles.statusSubtext}>
               Это может занять несколько секунд
@@ -375,7 +375,7 @@ export default function RecordScreen() {
         {recorder.recordingStatus === 'completed' && (
           <View style={styles.statusContainer}>
             <ThemedText style={[styles.statusText, { color: '#27AE60' }]}>
-              ✅ Запись обработана!
+              Запись обработана!
             </ThemedText>
             <ThemedText style={styles.statusSubtext}>
               Проверьте результаты ниже
@@ -386,36 +386,33 @@ export default function RecordScreen() {
         {/* Detections Section */}
         <View style={styles.detectionsSection}>
           <ThemedText style={styles.detectionsTitle}>
-            🎵 История обнаружений
+            История обнаружений
           </ThemedText>
           
           {detectionsLoading ? (
             <View style={styles.loadingContainer}>
               <Text style={styles.statusText}>Загрузка обнаружений...</Text>
             </View>
-          ) : detections.length > 0 ? (
+          ) : groupedDetections.length > 0 ? (
             <>
-              {/* Detection Statistics Summary */}
-              <DetectionSummary detections={detections} />
-              
               <View style={styles.detectionsContainer}>
-                {detections.slice(0, 5).map((detection: DetectionWithAudio, index: number) => (
-                  <DetectionCard
-                    key={`${detection.detection.id}-${index}`}
-                    detection={detection}
+                {groupedDetections.slice(0, 3).map((group) => (
+                  <AudioDetectionGroup
+                    key={group.audioId}
+                    audioId={group.audioId}
+                    detections={group.detections}
                   />
                 ))}
                 
-                {detections.length > 5 && (
+                {groupedDetections.length > 3 && (
                   <Pressable 
                     style={styles.viewMoreButton}
                     onPress={() => {
-                      // TODO: Navigate to full detections history page
-                      Alert.alert('История обнаружений', 'Полная история скоро будет доступна!');
+                      router.push('/detections-full');
                     }}
                   >
                     <Text style={styles.viewMoreText}>
-                      Посмотреть все ({detections.length}) →
+                      Посмотреть все ({groupedDetections.length} записей) →
                     </Text>
                   </Pressable>
                 )}
@@ -424,7 +421,7 @@ export default function RecordScreen() {
           ) : (
             <View style={styles.emptyStateContainer}>
               <Text style={styles.emptyStateText}>
-                🎤 Пока нет записей
+                Пока нет записей
               </Text>
               <Text style={styles.emptyStateSubtext}>
                 Нажмите кнопку записи, чтобы начать определение птиц по голосу

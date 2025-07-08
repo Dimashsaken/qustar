@@ -11,6 +11,15 @@ import type { BirdDetection, DetectionWithAudio } from '../types/audio';
 import { useAuth } from './useAuth';
 
 /**
+ * Grouped detections by audio recording
+ */
+export interface GroupedDetections {
+  audioId: string;
+  detections: DetectionWithAudio[];
+  recordedAt: string;
+}
+
+/**
  * Fetch user's detection results with associated audio uploads
  * @param userId - User ID to filter detections
  * @returns Promise resolving to detections with audio data
@@ -99,8 +108,8 @@ export const useAudioDetections = () => {
 
     console.log('🔔 Setting up enhanced real-time detection subscription for user:', user.id);
 
-    // Create unique channel name to avoid conflicts
-    const channelName = `detection-updates-${user.id}-${Date.now()}`;
+    // Create stable channel name for user
+    const channelName = `detection-updates-${user.id}`;
     
     const channel = supabase
       .channel(channelName)
@@ -161,14 +170,43 @@ export const useAudioDetections = () => {
   }, [user?.id, refetch]);
 
   /**
+   * Group detections by audio recording ID
+   * @returns Array of grouped detections sorted by recording time
+   */
+  const getGroupedDetections = useCallback((): GroupedDetections[] => {
+    const groups = new Map<string, DetectionWithAudio[]>();
+    
+    // Group detections by audio_id
+    detections.forEach((detection: DetectionWithAudio) => {
+      const audioId = detection.detection.audio_id;
+      if (!groups.has(audioId)) {
+        groups.set(audioId, []);
+      }
+      groups.get(audioId)!.push(detection);
+    });
+    
+    // Convert to array and sort by recording time (newest first)
+    const groupedArray: GroupedDetections[] = Array.from(groups.entries()).map(([audioId, detections]: [string, DetectionWithAudio[]]) => ({
+      audioId,
+      detections,
+      recordedAt: detections[0].audioUpload.recorded_at,
+    }));
+    
+    // Sort groups by recording time (newest first)
+    return groupedArray.sort((a, b) => 
+      new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
+    );
+  }, [detections]);
+
+  /**
    * Get detections for a specific audio upload
    * @param audioId - Audio upload ID
    * @returns Array of detections for the audio
    */
   const getDetectionsForAudio = useCallback((audioId: string): BirdDetection[] => {
     return detections
-      .filter((item) => item.detection.audio_id === audioId)
-      .map((item) => item.detection);
+      .filter((item: DetectionWithAudio) => item.detection.audio_id === audioId)
+      .map((item: DetectionWithAudio) => item.detection);
   }, [detections]);
 
   /**
@@ -185,7 +223,7 @@ export const useAudioDetections = () => {
    */
   const getSpeciesCounts = useCallback((): Map<string, number> => {
     const counts = new Map<string, number>();
-    detections.forEach((item) => {
+    detections.forEach((item: DetectionWithAudio) => {
       const species = item.detection.species;
       counts.set(species, (counts.get(species) || 0) + 1);
     });
@@ -199,6 +237,7 @@ export const useAudioDetections = () => {
     error,
     refetch,
     forceRefetch,
+    getGroupedDetections,
     getDetectionsForAudio,
     getRecentDetections,
     getSpeciesCounts,
