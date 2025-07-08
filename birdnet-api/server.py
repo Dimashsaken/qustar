@@ -9,6 +9,7 @@ import sys
 import argparse
 import tempfile
 import urllib.request
+import subprocess
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -60,6 +61,36 @@ def load_species_list():
         logger.error(f"Error loading species list: {e}")
         return []
 
+def convert_audio_format(input_path, output_path):
+    """Convert audio file to WAV format using FFmpeg"""
+    try:
+        # Use FFmpeg to convert to WAV format with proper sampling rate
+        cmd = [
+            'ffmpeg', 
+            '-i', input_path,
+            '-ar', '48000',  # Set sample rate to 48kHz (BirdNET requirement)
+            '-ac', '1',      # Convert to mono
+            '-f', 'wav',     # Output format
+            '-y',            # Overwrite output file
+            output_path
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if result.returncode != 0:
+            logger.error(f"FFmpeg conversion failed: {result.stderr}")
+            return False
+            
+        logger.info(f"Successfully converted audio to WAV format")
+        return True
+        
+    except subprocess.TimeoutExpired:
+        logger.error("FFmpeg conversion timed out")
+        return False
+    except Exception as e:
+        logger.error(f"Error converting audio format: {e}")
+        return False
+
 @app.route('/', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -86,33 +117,52 @@ def analyze_audio():
         
         logger.info(f"Analyzing audio from: {audio_url}")
         
-        # Download audio file to temporary location
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
-            try:
+        # Create temporary files for download and conversion
+        download_temp = None
+        converted_temp = None
+        
+        try:
+            # Download original audio file
+            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
                 urllib.request.urlretrieve(audio_url, temp_file.name)
-                temp_path = temp_file.name
-                
-                # Analyze audio using BirdNET
-                results = analyze_audio_file(temp_path, min_conf)
-                
-                return jsonify({
-                    "status": "success",
-                    "results": results,
-                    "audio_url": audio_url,
-                    "min_confidence": min_conf,
-                    "timestamp": datetime.now().isoformat()
-                })
-                
-            except Exception as e:
-                logger.error(f"Error downloading or analyzing audio: {e}")
-                return jsonify({"error": f"Failed to process audio: {str(e)}"}), 500
+                download_temp = temp_file.name
+                logger.info(f"Downloaded audio to: {download_temp}")
             
-            finally:
-                # Clean up temporary file
-                try:
-                    os.unlink(temp_path)
-                except:
-                    pass
+            # Create temporary file for converted audio
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as converted_file:
+                converted_temp = converted_file.name
+            
+            # Convert audio to WAV format
+            if not convert_audio_format(download_temp, converted_temp):
+                return jsonify({"error": "Failed to convert audio format"}), 500
+            
+            # Verify converted file exists and has content
+            if not os.path.exists(converted_temp) or os.path.getsize(converted_temp) == 0:
+                return jsonify({"error": "Audio conversion produced empty file"}), 500
+                
+            # Analyze converted audio using BirdNET
+            results = analyze_audio_file(converted_temp, min_conf)
+            
+            return jsonify({
+                "status": "success",
+                "results": results,
+                "audio_url": audio_url,
+                "min_confidence": min_conf,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"Error downloading or analyzing audio: {e}")
+            return jsonify({"error": f"Failed to process audio: {str(e)}"}), 500
+        
+        finally:
+            # Clean up temporary files
+            for temp_path in [download_temp, converted_temp]:
+                if temp_path:
+                    try:
+                        os.unlink(temp_path)
+                    except:
+                        pass
     
     except Exception as e:
         logger.error(f"Error in analyze endpoint: {e}")

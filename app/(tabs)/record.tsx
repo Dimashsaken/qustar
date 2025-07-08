@@ -9,22 +9,25 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import {
-  Alert,
-  Platform,
-  Pressable,
-  StatusBar as RNStatusBar,
-  SafeAreaView,
-  StyleSheet,
-  View
+    Alert,
+    Platform,
+    Pressable,
+    StatusBar as RNStatusBar,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
 } from 'react-native';
 
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { Colors, DesignTokens } from '../../constants/Colors';
+import { useAudioDetections } from '../../hooks/useAudioDetections';
 import { useAuth } from '../../hooks/useAuth';
 import { useBirdnetRecorder } from '../../hooks/useBirdnetRecorder';
 import { useThemeColor } from '../../hooks/useThemeColor';
-
+import type { DetectionWithAudio } from '../../types/audio';
 
 
 /**
@@ -84,6 +87,7 @@ const RecordingButton = ({
 export default function RecordScreen() {
   const { user, loading, isAuthenticated } = useAuth();
   const recorder = useBirdnetRecorder();
+  const { detections, isLoading: detectionsLoading } = useAudioDetections();
   
   // Only redirect if loading is complete and user is not authenticated
   useEffect(() => {
@@ -154,14 +158,98 @@ export default function RecordScreen() {
       </ThemedView>
 
       {/* Main Content */}
-      <ThemedView {...(Platform.OS === 'android' ? { surface: 'background' as const } : {})} style={styles.content}>
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Large Recording Button */}
         <RecordingButton
           isRecording={isRecording}
           onPress={handleToggleRecording}
           disabled={isDisabled}
         />
-      </ThemedView>
+
+        {/* Status Message */}
+        {recorder.recordingStatus === 'processing' && (
+          <ThemedText style={styles.statusText}>
+            🔍 Обрабатываем запись...
+          </ThemedText>
+        )}
+
+        {recorder.recordingStatus === 'completed' && (
+          <ThemedText style={styles.statusText}>
+            ✅ Запись обработана! Проверьте результаты ниже.
+          </ThemedText>
+        )}
+
+        {/* Detections Section */}
+        <View style={styles.detectionsSection}>
+          <ThemedText style={styles.detectionsTitle}>
+            🎵 История обнаружений
+          </ThemedText>
+          
+          {detectionsLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.statusText}>Загрузка обнаружений...</Text>
+            </View>
+          ) : detections.length > 0 ? (
+            <View style={styles.detectionsContainer}>
+              {detections.slice(0, 5).map((item: DetectionWithAudio, index: number) => (
+                <Pressable 
+                  key={`${item.detection.id}-${index}`} 
+                  style={styles.detectionItem}
+                  onPress={() => {
+                    // Navigate to bird detail if we can match the species
+                    const speciesParts = item.detection.species.split('_');
+                    if (speciesParts.length >= 2) {
+                      router.push(`/bird/search?species=${encodeURIComponent(item.detection.species)}`);
+                    }
+                  }}
+                >
+                  <Text style={styles.detectionSpecies}>
+                    {item.detection.species.replace(/_/g, ' ')}
+                  </Text>
+                  <Text style={styles.detectionConfidence}>
+                    Уверенность: {Math.round(item.detection.confidence * 100)}%
+                  </Text>
+                  <Text style={styles.detectionTime}>
+                    {new Date(item.audioUpload.recorded_at).toLocaleDateString('ru-RU', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </Text>
+                </Pressable>
+              ))}
+              
+              {detections.length > 5 && (
+                <Pressable 
+                  style={styles.viewMoreButton}
+                  onPress={() => {
+                    // TODO: Navigate to full detections history page
+                    Alert.alert('История обнаружений', 'Полная история скоро будет доступна!');
+                  }}
+                >
+                  <Text style={styles.viewMoreText}>
+                    Посмотреть все ({detections.length}) →
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateText}>
+                🎤 Пока нет записей
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Нажмите кнопку записи, чтобы начать определение птиц по голосу
+              </Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -225,5 +313,97 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#FF4444',
+  },
+  scrollContent: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  contentContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingBottom: DesignTokens.spacing.xl * 2,
+  },
+  statusText: {
+    textAlign: 'center',
+    marginTop: DesignTokens.spacing.md,
+    marginBottom: DesignTokens.spacing.md,
+    fontSize: 16,
+    color: Colors.light.text,
+  },
+  detectionsSection: {
+    marginTop: DesignTokens.spacing.xl,
+    width: '100%',
+  },
+  detectionsContainer: {
+    width: '100%',
+    marginTop: DesignTokens.spacing.md,
+  },
+  detectionsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: DesignTokens.spacing.sm,
+    color: Colors.light.text,
+    textAlign: 'center',
+  },
+  detectionItem: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: DesignTokens.borderRadius.card,
+    paddingVertical: DesignTokens.spacing.md,
+    paddingHorizontal: DesignTokens.spacing.lg,
+    marginBottom: DesignTokens.spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    ...DesignTokens.shadows.subtle,
+  },
+  detectionSpecies: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+  },
+  detectionConfidence: {
+    fontSize: 14,
+    color: Colors.light.primary,
+    marginTop: DesignTokens.spacing.xs,
+    fontWeight: '500',
+  },
+  detectionTime: {
+    fontSize: 12,
+    color: Colors.light.textMuted,
+    marginTop: DesignTokens.spacing.xs,
+  },
+  loadingContainer: {
+    paddingVertical: DesignTokens.spacing.md,
+    alignItems: 'center',
+  },
+  viewMoreButton: {
+    marginTop: DesignTokens.spacing.sm,
+    alignSelf: 'center',
+    paddingVertical: DesignTokens.spacing.sm,
+    paddingHorizontal: DesignTokens.spacing.md,
+  },
+  viewMoreText: {
+    color: Colors.light.tint,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  emptyStateContainer: {
+    paddingVertical: DesignTokens.spacing.xl,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginBottom: DesignTokens.spacing.xs,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: Colors.light.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: DesignTokens.spacing.md,
   },
 }); 

@@ -15,6 +15,7 @@ import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { IconSymbol } from '../../components/ui/IconSymbol';
 import { Colors, DesignTokens } from '../../constants/Colors';
+import { useAudioDetections } from '../../hooks/useAudioDetections';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserComments } from '../../hooks/useComments';
 import { useFavorites } from '../../hooks/useFavorites';
@@ -39,6 +40,10 @@ export default function ProfileScreen() {
     count: notesCount
   } = useUserComments();
 
+  const {
+    detections,
+    isLoading: detectionsLoading,
+  } = useAudioDetections();
 
 
   /**
@@ -103,10 +108,10 @@ export default function ProfileScreen() {
       </View>
       <View style={styles.statItem}>
         <ThemedText type="title" style={styles.statNumber}>
-          0
+          {detectionsLoading ? '...' : detections.length}
         </ThemedText>
         <ThemedText type="default" style={styles.statLabel}>
-          Наблюдений
+          Аудио записей
         </ThemedText>
       </View>
     </ThemedView>
