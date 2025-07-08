@@ -5,6 +5,10 @@ providers = ["node"]
 [variables]
 PORT = "8080"  # Railway will override this at runtime
 
+# Required environment variables for Supabase (set these in Railway dashboard):
+# EXPO_PUBLIC_SUPABASE_URL = "https://odmfmyrdaisfboswcidq.supabase.co"
+# EXPO_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kbWZteXJkYWlzZmJvc3djaWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMDIxNjUsImV4cCI6MjA2NjU3ODE2NX0.KaRqs_2cq6_RojECahFMeo4J2-E2vBlkAiImOj9tikk"
+
 # Installation phase – rely on default Node provider install but ensure clean install
 [phases.install]
 cmds = ["npm install --legacy-peer-deps"]

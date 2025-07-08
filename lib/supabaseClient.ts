@@ -13,6 +13,15 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables');
+  console.error('Required: EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  
+  // For deployment builds, provide more detailed error information
+  if (process.env.NODE_ENV === 'production') {
+    console.error('🔧 Set these environment variables in your deployment platform:');
+    console.error('   - EXPO_PUBLIC_SUPABASE_URL');
+    console.error('   - EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  }
+  
   throw new Error('Missing Supabase environment variables');
 }
 
