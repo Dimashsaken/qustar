@@ -36,7 +36,8 @@ export default function DetectionsFullScreen() {
     detections, 
     isLoading, 
     error, 
-    refetch 
+    refetch,
+    forceRefetch 
   } = useAudioDetections();
 
   /**
@@ -84,7 +85,7 @@ export default function DetectionsFullScreen() {
       <ThemedText type="default" style={styles.errorSubtext}>
         {error?.message || 'Не удалось загрузить записи'}
       </ThemedText>
-      <Pressable style={styles.retryButton} onPress={() => refetch()}>
+      <Pressable style={styles.retryButton} onPress={() => forceRefetch()}>
         <ThemedText type="bold" style={styles.retryButtonText}>
           Попробовать снова
         </ThemedText>

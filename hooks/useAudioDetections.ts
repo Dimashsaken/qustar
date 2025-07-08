@@ -5,7 +5,7 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { BirdDetection, DetectionWithAudio } from '../types/audio';
 import { useAuth } from './useAuth';
@@ -16,6 +16,8 @@ import { useAuth } from './useAuth';
  * @returns Promise resolving to detections with audio data
  */
 const fetchAudioDetections = async (userId: string): Promise<DetectionWithAudio[]> => {
+  console.log('🔍 Fetching audio detections for user:', userId);
+  
   // Fetch detections directly by user_id for better performance
   const { data: detections, error: detectionsError } = await supabase
     .from('detections')
@@ -27,11 +29,14 @@ const fetchAudioDetections = async (userId: string): Promise<DetectionWithAudio[
     .order('created_at', { ascending: false });
 
   if (detectionsError) {
+    console.error('❌ Error fetching detections:', detectionsError);
     throw new Error(`Failed to fetch detections: ${detectionsError.message}`);
   }
 
+  console.log(`✅ Fetched ${detections?.length || 0} detections`);
+
   // Transform data structure for compatibility
-  const detectionsWithAudio: DetectionWithAudio[] = detections.map((detection) => ({
+  const detectionsWithAudio: DetectionWithAudio[] = (detections || []).map((detection: any) => ({
     detection: {
       id: detection.id,
       audio_id: detection.audio_id,
@@ -56,7 +61,7 @@ export const useAudioDetections = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Query for fetching detections
+  // Query for fetching detections with aggressive refetch strategies
   const {
     data: detections = [],
     isLoading,
@@ -67,31 +72,50 @@ export const useAudioDetections = () => {
     queryKey: ['audioDetections', user?.id],
     queryFn: () => fetchAudioDetections(user!.id),
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 0, // Always consider data stale for immediate updates
+    gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnReconnect: true, // Refetch when network reconnects
+    retry: 3,
+    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  /**
+   * Force immediate refetch of detections
+   */
+  const forceRefetch = useCallback(async () => {
+    console.log('🔄 Force refetching detections...');
+    await queryClient.invalidateQueries({ 
+      queryKey: ['audioDetections', user?.id],
+      refetchType: 'all' // Force refetch even if data is fresh
+    });
+    await refetch();
+  }, [queryClient, user?.id, refetch]);
 
   // Real-time subscription for new detections
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log('🔔 Setting up real-time detection subscription');
+    console.log('🔔 Setting up enhanced real-time detection subscription for user:', user.id);
 
-    // Subscribe to new detections directly for the current user
+    // Create unique channel name to avoid conflicts
+    const channelName = `detection-updates-${user.id}-${Date.now()}`;
+    
     const channel = supabase
-      .channel('detection-updates')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'detections',
-          filter: `user_id=eq.${user.id}`, // Direct filter by user_id
+          filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
+        async (payload: any) => {
           console.log('🔔 New detection received:', payload.new);
-          // Invalidate and refetch detections
-          queryClient.invalidateQueries({ queryKey: ['audioDetections', user.id] });
+          // Force immediate update
+          await forceRefetch();
         }
       )
       .on(
@@ -102,52 +126,71 @@ export const useAudioDetections = () => {
           table: 'audio_uploads',
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
+        async (payload: any) => {
           console.log('🔔 Audio upload status updated:', payload.new);
-          // Refetch when upload status changes (e.g., processing -> completed)
-          queryClient.invalidateQueries({ queryKey: ['audioDetections', user.id] });
+          // Force immediate update when upload status changes
+          await forceRefetch();
         }
       )
-      .subscribe();
+      .subscribe((status: any) => {
+        console.log('🔔 Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error');
+        }
+      });
 
     // Cleanup subscription
     return () => {
       console.log('🔔 Cleaning up detection subscription');
       supabase.removeChannel(channel);
     };
-  }, [user?.id, queryClient]);
+  }, [user?.id, forceRefetch]);
+
+  // Additional effect to periodically check for new detections (fallback)
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const interval = setInterval(() => {
+      console.log('🔄 Periodic detection refresh');
+      refetch();
+    }, 30000); // Check every 30 seconds as fallback
+
+    return () => clearInterval(interval);
+  }, [user?.id, refetch]);
 
   /**
    * Get detections for a specific audio upload
    * @param audioId - Audio upload ID
    * @returns Array of detections for the audio
    */
-  const getDetectionsForAudio = (audioId: string): BirdDetection[] => {
+  const getDetectionsForAudio = useCallback((audioId: string): BirdDetection[] => {
     return detections
       .filter((item) => item.detection.audio_id === audioId)
       .map((item) => item.detection);
-  };
+  }, [detections]);
 
   /**
    * Get the most recent detections (last 10)
    * @returns Array of recent detections
    */
-  const getRecentDetections = (): DetectionWithAudio[] => {
+  const getRecentDetections = useCallback((): DetectionWithAudio[] => {
     return detections.slice(0, 10);
-  };
+  }, [detections]);
 
   /**
    * Get detections grouped by species
    * @returns Map of species name to detection count
    */
-  const getSpeciesCounts = (): Map<string, number> => {
+  const getSpeciesCounts = useCallback((): Map<string, number> => {
     const counts = new Map<string, number>();
     detections.forEach((item) => {
       const species = item.detection.species;
       counts.set(species, (counts.get(species) || 0) + 1);
     });
     return counts;
-  };
+  }, [detections]);
 
   return {
     detections,
@@ -155,6 +198,7 @@ export const useAudioDetections = () => {
     isError,
     error,
     refetch,
+    forceRefetch,
     getDetectionsForAudio,
     getRecentDetections,
     getSpeciesCounts,

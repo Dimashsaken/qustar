@@ -236,7 +236,7 @@ const RecordingButton = ({
 export default function RecordScreen() {
   const { user, loading, isAuthenticated } = useAuth();
   const recorder = useBirdnetRecorder();
-  const { detections, isLoading: detectionsLoading } = useAudioDetections();
+  const { detections, isLoading: detectionsLoading, forceRefetch } = useAudioDetections();
   
   // Only redirect if loading is complete and user is not authenticated
   useEffect(() => {
@@ -244,6 +244,14 @@ export default function RecordScreen() {
       router.replace('/auth');
     }
   }, [loading, isAuthenticated]);
+
+  // Force refresh detections when recording is completed
+  useEffect(() => {
+    if (recorder.recordingStatus === 'completed') {
+      console.log('🔄 Recording completed, refreshing detections...');
+      forceRefetch();
+    }
+  }, [recorder.recordingStatus, forceRefetch]);
 
   /**
    * Handle recording start/stop toggle with better error handling
