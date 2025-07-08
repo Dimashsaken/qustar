@@ -8,7 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "prebuild:web": "rm -rf dist && rm -rf .expo && rm -rf node_modules/.cache",
+    "prebuild:web": "rm -rf dist && rm -rf .expo",
     "build:web": "npm run prebuild:web && EXPO_NO_CACHE=1 NODE_ENV=production expo export --platform web --output-dir dist",
     "lint": "expo lint"
   },
