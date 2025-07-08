@@ -13,6 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN git clone --depth 1 https://github.com/birdnet-team/BirdNET-Analyzer BirdNET-Analyzer \
  && pip install --no-cache-dir ./BirdNET-Analyzer
 
+# Download the BirdNET model file that the server expects
+RUN mkdir -p BirdNET-Analyzer/models \
+ && wget -q https://github.com/woheller69/whoBIRD-TFlite/raw/master/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite \
+     -O BirdNET-Analyzer/models/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite
+
 # Copy our server file
 COPY birdnet-api/server.py .
 
