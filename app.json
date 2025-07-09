@@ -11,7 +11,12 @@
       "supportsTablet": true
     },
     "android": {
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "package": "com.dimash_saken.qustar"
     },
     "web": {
       "bundler": "metro",
@@ -21,10 +26,21 @@
     "plugins": [
       "expo-router",
       "expo-localization",
-      ["expo-audio", { "microphonePermission": "Allow QuStar to record birdsong for identification." }]
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow QuStar to record birdsong for identification."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5f4f0424-5e1c-4270-b28c-65550768d696"
+      }
     }
   }
 }
