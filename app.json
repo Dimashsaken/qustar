@@ -2,7 +2,7 @@
   "expo": {
     "name": "qustar",
     "slug": "qustar",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "qustar",
     "userInterfaceStyle": "automatic",
