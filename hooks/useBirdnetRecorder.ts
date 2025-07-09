@@ -7,7 +7,7 @@
 import { AudioModule, RecordingPresets, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import * as FileSystem from 'expo-file-system';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { supabase } from '../lib/supabaseClient';
 import type { AudioRecorderHook, PermissionStatus, RecordingError, RecordingStatus } from '../types/audio';
 import { useAuth } from './useAuth';
@@ -29,8 +29,6 @@ const BIRD_RECORDING_PRESET = {
   },
 };
 
-
-
 /**
  * Hook for recording audio and triggering BirdNET analysis
  * Manages the complete workflow from recording to species identification
@@ -43,7 +41,7 @@ export const useBirdnetRecorder = (): AudioRecorderHook => {
   
   const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>('idle');
   const [duration, setDuration] = useState(0);
-  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('undetermined');
+  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus | undefined>(undefined);
   const [lastError, setLastError] = useState<RecordingError | null>(null);
 
   /**
@@ -65,7 +63,7 @@ export const useBirdnetRecorder = (): AudioRecorderHook => {
   /**
    * Request microphone permissions with user-friendly guidance
    */
-  const requestPermissions = useCallback(async (): Promise<boolean> => {
+  const requestPermissions = useCallback(async (showAlerts: boolean = true): Promise<boolean> => {
     try {
       const currentStatus = await checkPermissions();
       
@@ -74,28 +72,41 @@ export const useBirdnetRecorder = (): AudioRecorderHook => {
       }
 
       if (currentStatus === 'blocked') {
-        Alert.alert(
-          'Microphone Access Required',
-          'To record bird sounds, please enable microphone access in your device settings.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-                       { text: 'Open Settings', onPress: () => {
-             // Note: Opening settings requires additional setup
-             console.log('Open settings requested');
-           }},
-          ]
-        );
+        if (showAlerts) {
+          Alert.alert(
+            'Доступ к микрофону необходим',
+            'Для записи звуков птиц откройте настройки устройства и разрешите доступ к микрофону.',
+            [
+              { text: 'Отмена', style: 'cancel' },
+              { 
+                text: 'Открыть настройки', 
+                onPress: () => {
+                  Linking.openSettings();
+                }
+              },
+            ]
+          );
+        }
         return false;
       }
 
       const { granted } = await AudioModule.requestRecordingPermissionsAsync();
-      setPermissionStatus(granted ? 'granted' : 'denied');
+      const newStatus = granted ? 'granted' : 'denied';
+      setPermissionStatus(newStatus);
       
-      if (!granted) {
+      if (!granted && showAlerts) {
         Alert.alert(
-          'Permission Required',
-          'Microphone access is needed to record bird sounds for identification. Please grant permission and try again.',
-          [{ text: 'OK' }]
+          'Разрешение необходимо',
+          'Доступ к микрофону нужен для записи звуков птиц. Пожалуйста, разрешите доступ в настройках устройства.',
+          [
+            { text: 'Отмена', style: 'cancel' },
+            { 
+              text: 'Открыть настройки', 
+              onPress: () => {
+                Linking.openSettings();
+              }
+            },
+          ]
         );
       }
       
@@ -163,10 +174,22 @@ export const useBirdnetRecorder = (): AudioRecorderHook => {
     }
   }, []);
 
-  // Monitor permission status on mount
+  // Silently check permission status on mount (don't request)
   useEffect(() => {
-    checkPermissions();
-  }, [checkPermissions]);
+    let mounted = true;
+    
+    const initializePermissions = async () => {
+      if (mounted) {
+        await checkPermissions();
+      }
+    };
+    
+    initializePermissions();
+    
+    return () => {
+      mounted = false;
+    };
+  }, []); // No dependencies to prevent infinite loop
 
   // Monitor recording state
   useEffect(() => {

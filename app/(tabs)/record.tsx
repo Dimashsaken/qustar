@@ -9,15 +9,15 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-  Modal,
-  Platform,
-  Pressable,
-  StatusBar as RNStatusBar,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View
+    Modal,
+    Platform,
+    Pressable,
+    StatusBar as RNStatusBar,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
@@ -41,37 +41,20 @@ const PermissionBanner = ({
   permissionStatus?: string;
   onRequestPermissions: () => void;
 }) => {
-  if (!permissionStatus || permissionStatus === 'granted') {
+  // Only show banner for blocked permissions - not for denied or undefined
+  if (permissionStatus !== 'blocked') {
     return null;
   }
 
   const getBannerConfig = () => {
-    switch (permissionStatus) {
-      case 'denied':
-        return {
-          color: '#FF6B35',
-          icon: 'warning' as const,
-          title: 'Microphone Access Required',
-          message: 'Grant microphone permission to record bird sounds',
-          action: 'Grant Permission',
-        };
-      case 'blocked':
-        return {
-          color: '#E74C3C',
-          icon: 'ban' as const,
-          title: 'Microphone Access Blocked',
-          message: 'Please enable microphone access in device settings',
-          action: 'Open Settings',
-        };
-      default:
-        return {
-          color: '#3498DB',
-          icon: 'information-circle' as const,
-          title: 'Checking Permissions',
-          message: 'Verifying microphone access...',
-          action: null,
-        };
-    }
+    // Only blocked permissions reach this point
+    return {
+      color: '#E74C3C',
+      icon: 'ban' as const,
+      title: 'Доступ к микрофону заблокирован',
+      message: 'Откройте настройки устройства и разрешите доступ к микрофону',
+      action: 'Открыть настройки',
+    };
   };
 
   const config = getBannerConfig();
@@ -122,7 +105,7 @@ const RecordingButton = ({
   
   const getButtonState = () => {
     if (disabled) return { color: '#BDC3C7', opacity: 0.5 };
-    if (permissionStatus && permissionStatus !== 'granted') {
+    if (permissionStatus === 'blocked') {
       return { color: '#E74C3C', opacity: 0.7 };
     }
     return { 
@@ -132,7 +115,8 @@ const RecordingButton = ({
   };
 
   const buttonState = getButtonState();
-  const canRecord = !disabled && permissionStatus === 'granted';
+  // Allow button press even if permission not yet granted - we'll request it when pressed
+  const canRecord = !disabled && permissionStatus !== 'blocked';
 
   const handlePress = () => {
     if (!canRecord) return;
@@ -172,12 +156,9 @@ const RecordingButton = ({
       )}
       
       {/* Status hints */}
-      {!canRecord && !disabled && (
+      {!canRecord && !disabled && permissionStatus === 'blocked' && (
         <ThemedText style={styles.statusHint}>
-          {permissionStatus === 'denied' || permissionStatus === 'blocked' 
-            ? '🎙️ Microphone access needed'
-            : '🎙️ Checking permissions...'
-          }
+          🎙️ Необходим доступ к микрофону
         </ThemedText>
       )}
     </View>
@@ -309,6 +290,24 @@ export default function RecordScreen() {
     }
   }, [loading, isAuthenticated]);
 
+  // Check permission status without requesting on page open
+  useEffect(() => {
+    let mounted = true;
+
+    const checkPermissionsOnMount = async () => {
+      if (!loading && isAuthenticated && mounted && recorder.checkPermissions) {
+        // Just check current status, don't request
+        await recorder.checkPermissions();
+      }
+    };
+
+    checkPermissionsOnMount();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loading, isAuthenticated]);
+
   // Track detection count to detect new birds
   useEffect(() => {
     setDetectionCount(detections.length);
@@ -344,7 +343,7 @@ export default function RecordScreen() {
   }, [recorder.recordingStatus, detectionCount, forceRefetch, detections.length]);
 
   /**
-   * Handle recording start/stop toggle with better error handling
+   * Handle recording start/stop toggle with permission checking
    */
   const handleToggleRecording = async () => {
     if (!user) return;
@@ -358,6 +357,15 @@ export default function RecordScreen() {
         // Error is now handled by the hook's error state
       }
     } else {
+      // Check and request permissions before starting recording
+      if (recorder.requestPermissions) {
+        const hasPermission = await recorder.requestPermissions();
+        if (!hasPermission) {
+          // User denied permission, don't start recording
+          return;
+        }
+      }
+
       // Start recording - reset no birds message
       setShowNoBirdsMessage(false);
       try {

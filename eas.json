@@ -33,6 +33,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "gubayev0703@icloud.com",
+        "ascAppId": "6748380625",
+        "appleTeamId": "DJDVY4P58A"
+      }
+    }
   }
 }

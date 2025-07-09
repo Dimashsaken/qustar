@@ -71,7 +71,7 @@ export interface AudioRecorderHook {
   stop: (userId: string) => Promise<string>;
   reset: () => void;
   checkPermissions?: () => Promise<PermissionStatus>;
-  requestPermissions?: () => Promise<boolean>;
+  requestPermissions?: (showAlerts?: boolean) => Promise<boolean>;
 }
 
 /**
