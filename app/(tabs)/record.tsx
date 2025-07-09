@@ -469,7 +469,7 @@ export default function RecordScreen() {
 
         {recorder.recordingStatus === 'completed' && (
           <View style={styles.statusContainer}>
-            <ThemedText style={[styles.statusText, { color: showNoBirdsMessage ? '#F39C12' : '#27AE60' }]}>
+            <ThemedText style={[styles.statusText, { color: showNoBirdsMessage ? '#F39C12' : 'black' }]}>
               {showNoBirdsMessage ? 'Птицы не обнаружены' : 'Запись обработана!'}
             </ThemedText>
             <ThemedText style={styles.statusSubtext}>
