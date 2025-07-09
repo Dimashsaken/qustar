@@ -422,18 +422,7 @@ export default function BirdDetailScreen() {
                 </View>
               )}
 
-              {/* Additional notes */}
-              {bird.notes_ru && (
-                <View style={styles.sectionCard}>
-                  <ThemedText type="title" style={styles.sectionTitle}>
-                    Заметки
-                  </ThemedText>
-                  <View style={styles.sectionDivider} />
-                  <ThemedText type="default" style={styles.descriptionText}>
-                    {bird.notes_ru}
-                  </ThemedText>
-                </View>
-              )}
+
 
               {/* Subspecies in Kazakhstan */}
               {bird.subspecies_in_kz && (

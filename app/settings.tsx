@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Alert,
+    Modal,
     Platform,
     Pressable,
     StatusBar as RNStatusBar,
@@ -12,6 +13,7 @@ import {
     View
 } from 'react-native';
 
+import { FeedbackForm } from '../components/FeedbackForm';
 import { ThemedText } from '../components/ThemedText';
 import { ThemedView } from '../components/ThemedView';
 import { IconSymbol } from '../components/ui/IconSymbol';
@@ -24,12 +26,27 @@ import { useAuth } from '../hooks/useAuth';
  */
 export default function SettingsScreen() {
   const { signOut } = useAuth();
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   /**
    * Handles back navigation
    */
   const handleGoBack = () => {
     router.back();
+  };
+
+  /**
+   * Handles opening feedback modal
+   */
+  const handleOpenFeedback = () => {
+    setShowFeedbackModal(true);
+  };
+
+  /**
+   * Handles closing feedback modal
+   */
+  const handleCloseFeedback = () => {
+    setShowFeedbackModal(false);
   };
 
   /**
@@ -61,7 +78,7 @@ export default function SettingsScreen() {
    */
   const renderSettingItem = (
     title: string,
-    iconName: string,
+    iconName: React.ComponentProps<typeof IconSymbol>['name'],
     onPress?: () => void,
     showChevron: boolean = true
   ) => (
@@ -101,7 +118,6 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Приложение
             </ThemedText>
-            {renderSettingItem('Уведомления', 'bell.fill')}
             {renderSettingItem('Язык', 'globe')}
             {renderSettingItem('Темная тема', 'moon.fill')}
           </ThemedView>
@@ -112,8 +128,6 @@ export default function SettingsScreen() {
               Аккаунт
             </ThemedText>
             {renderSettingItem('Изменить пароль', 'key.fill')}
-            {renderSettingItem('Управление данными', 'doc.text.fill')}
-            {renderSettingItem('Резервное копирование', 'icloud.fill')}
           </ThemedView>
 
           {/* Help & Support */}
@@ -121,8 +135,7 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Помощь и поддержка
             </ThemedText>
-            {renderSettingItem('Часто задаваемые вопросы', 'questionmark.circle')}
-            {renderSettingItem('Обратная связь', 'envelope.fill')}
+            {renderSettingItem('Обратная связь', 'envelope.fill', handleOpenFeedback)}
             {renderSettingItem('О приложении', 'info.circle')}
           </ThemedView>
 
@@ -134,6 +147,19 @@ export default function SettingsScreen() {
             </ThemedText>
           </Pressable>
         </ScrollView>
+
+        {/* Feedback Modal */}
+        <Modal
+          animationType="slide"
+          presentationStyle="pageSheet"
+          visible={showFeedbackModal}
+          onRequestClose={handleCloseFeedback}
+        >
+          <FeedbackForm
+            onSubmitSuccess={handleCloseFeedback}
+            onCancel={handleCloseFeedback}
+          />
+        </Modal>
       </SafeAreaView>
     </>
   );
