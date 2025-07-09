@@ -115,7 +115,8 @@ const RecordingButton = ({
   };
 
   const buttonState = getButtonState();
-  // Allow button press even if permission not yet granted - we'll request it when pressed
+  // Allow button press unless disabled or permissions are permanently blocked
+  // The hook will handle permission requests intelligently
   const canRecord = !disabled && permissionStatus !== 'blocked';
 
   const handlePress = () => {
@@ -371,16 +372,8 @@ export default function RecordScreen() {
         // Error is now handled by the hook's error state
       }
     } else {
-      // Check and request permissions before starting recording
-      if (recorder.requestPermissions) {
-        const hasPermission = await recorder.requestPermissions();
-        if (!hasPermission) {
-          // User denied permission, don't start recording
-          return;
-        }
-      }
-
       // Start recording - reset no birds message and capture current detection count
+      // The hook will handle permission checking internally now
       setShowNoBirdsMessage(false);
       setDetectionCountBeforeRecording(detections.length);
       console.log(`📊 Capturing detection count before recording: ${detections.length}`);

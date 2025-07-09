@@ -210,10 +210,13 @@ export const useBirdnetRecorder = (): AudioRecorderHook => {
         throw new Error('User must be authenticated to record');
       }
 
-      // Check and request permissions
-      const hasPermission = await requestPermissions();
-      if (!hasPermission) {
-        throw new Error('Microphone permission required');
+      // Check current permission status first - only request if not already granted
+      const currentStatus = await checkPermissions();
+      if (currentStatus !== 'granted') {
+        const hasPermission = await requestPermissions();
+        if (!hasPermission) {
+          throw new Error('Microphone permission required');
+        }
       }
 
       // Prepare and start recording
@@ -234,7 +237,7 @@ export const useBirdnetRecorder = (): AudioRecorderHook => {
       });
       throw error;
     }
-  }, [recorder, user, requestPermissions]);
+  }, [recorder, user, requestPermissions, checkPermissions]);
 
   /**
    * Stop recording and trigger BirdNET analysis with retry mechanism
