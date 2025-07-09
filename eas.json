@@ -4,14 +4,31 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://odmfmyrdaisfboswcidq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kbWZteXJkYWlzZmJvc3djaWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMDIxNjUsImV4cCI6MjA2NjU3ODE2NX0.KaRqs_2cq6_RojECahFMeo4J2-E2vBlkAiImOj9tikk",
+        "S3_ACCESS_KEY_ID": "e0016762727129d09548933f1d363ee4",
+        "S3_SECRET_ACCESS_KEY": "a89928ce54bd1a6a9eddd87ddb190184652f9253ccc6e666e360d01a501d72fa",
+        "S3_REGION": "us-east-1",
+        "S3_ENDPOINT": "https://odmfmyrdaisfboswcidq.supabase.co/storage/v1/s3",
+        "PYTHONUNBUFFERED": "1",
+        "BIRDNET_THREADS": "2",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kbWZteXJkYWlzZmJvc3djaWRxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTAwMjE2NSwiZXhwIjoyMDY2NTc4MTY1fQ.798icSMkKgOXAbXrhvPnk67r2kfzRqXD4KQ0pJRn96g",
+        "BIRDNET_URL": "https://qustar-production-bcc3.up.railway.app"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal"
     },
     "production": {
+      "extends": "base",
       "autoIncrement": true
     }
   },
