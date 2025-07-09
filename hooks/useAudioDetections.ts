@@ -70,7 +70,7 @@ export const useAudioDetections = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Query for fetching detections with aggressive refetch strategies
+  // Query for fetching detections with reasonable caching
   const {
     data: detections = [],
     isLoading,
@@ -81,11 +81,11 @@ export const useAudioDetections = () => {
     queryKey: ['audioDetections', user?.id],
     queryFn: () => fetchAudioDetections(user!.id),
     enabled: !!user?.id,
-    staleTime: 0, // Always consider data stale for immediate updates
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
-    refetchOnMount: true, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchOnReconnect: true, // Refetch when network reconnects
+    refetchOnMount: false, // Don't automatically refetch on mount
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: true, // Only refetch when network reconnects
     retry: 3,
     retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
@@ -97,10 +97,9 @@ export const useAudioDetections = () => {
     console.log('🔄 Force refetching detections...');
     await queryClient.invalidateQueries({ 
       queryKey: ['audioDetections', user?.id],
-      refetchType: 'all' // Force refetch even if data is fresh
+      refetchType: 'active' // Only refetch active queries
     });
-    await refetch();
-  }, [queryClient, user?.id, refetch]);
+  }, [queryClient, user?.id]);
 
   // Real-time subscription for new detections
   useEffect(() => {
@@ -157,17 +156,7 @@ export const useAudioDetections = () => {
     };
   }, [user?.id, forceRefetch]);
 
-  // Additional effect to periodically check for new detections (fallback)
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const interval = setInterval(() => {
-      console.log('🔄 Periodic detection refresh');
-      refetch();
-    }, 30000); // Check every 30 seconds as fallback
-
-    return () => clearInterval(interval);
-  }, [user?.id, refetch]);
+  // Note: Real-time subscription handles updates, no periodic polling needed
 
   /**
    * Group detections by audio recording ID

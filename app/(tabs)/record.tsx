@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Modal,
     Platform,
@@ -281,7 +281,25 @@ export default function RecordScreen() {
   const { detections, isLoading: detectionsLoading, forceRefetch, getGroupedDetections } = useAudioDetections();
   const [isRecordingGuideModalVisible, setIsRecordingGuideModalVisible] = useState(false);
   const [showNoBirdsMessage, setShowNoBirdsMessage] = useState(false);
-  const [detectionCount, setDetectionCount] = useState(0);
+  const [detectionCountBeforeRecording, setDetectionCountBeforeRecording] = useState(0);
+  
+  // Use refs to capture current values without causing dependency loops
+  const detectionsRef = useRef(detections);
+  const forceRefetchRef = useRef(forceRefetch);
+  const detectionCountRef = useRef(detectionCountBeforeRecording);
+  
+  // Update refs when values change
+  useEffect(() => {
+    detectionsRef.current = detections;
+  }, [detections]);
+  
+  useEffect(() => {
+    forceRefetchRef.current = forceRefetch;
+  }, [forceRefetch]);
+  
+  useEffect(() => {
+    detectionCountRef.current = detectionCountBeforeRecording;
+  }, [detectionCountBeforeRecording]);
   
   // Only redirect if loading is complete and user is not authenticated
   useEffect(() => {
@@ -308,39 +326,35 @@ export default function RecordScreen() {
     };
   }, [loading, isAuthenticated]);
 
-  // Track detection count to detect new birds
-  useEffect(() => {
-    setDetectionCount(detections.length);
-  }, [detections.length]);
-
-  // Monitor for new detections after recording completes
+  // Monitor for recording completion and check for new detections after 3 seconds
   useEffect(() => {
     if (recorder.recordingStatus === 'completed') {
-      console.log('🔄 Recording completed, checking for new detections...');
-      const initialCount = detectionCount;
+      console.log('🔄 Recording completed, will check for new detections in 3 seconds...');
       
-      // Wait for analysis to complete and check for new detections
-      const checkForNewDetections = () => {
-        setTimeout(async () => {
-          await forceRefetch();
+      // Single timeout check after 3 seconds
+      const timeoutId = setTimeout(async () => {
+        await forceRefetchRef.current();
+        
+        // Get fresh detection count after refetch
+        setTimeout(() => {
+          const currentCount = detectionsRef.current.length;
+          const beforeCount = detectionCountRef.current;
+          console.log(`Detection count: ${beforeCount} -> ${currentCount}`);
           
-          // Check again after a delay to ensure analysis is complete
-          setTimeout(() => {
-            const currentCount = detections.length;
-            console.log(`Detection count: ${initialCount} -> ${currentCount}`);
-            
-            if (currentCount === initialCount) {
-              // No new detections found
-              console.log('⚠️ No new birds detected');
-              setShowNoBirdsMessage(true);
-            }
-          }, 3000); // Wait 3 seconds for analysis
-        }, 2000); // Initial delay for processing
-      };
-      
-      checkForNewDetections();
+          if (currentCount === beforeCount) {
+            // No new detections found
+            console.log('⚠️ No new birds detected');
+            setShowNoBirdsMessage(true);
+          } else {
+            console.log(`✅ Found ${currentCount - beforeCount} new birds`);
+            setShowNoBirdsMessage(false);
+          }
+        }, 500); // Small delay to let the refetch complete
+      }, 3000);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [recorder.recordingStatus, detectionCount, forceRefetch, detections.length]);
+  }, [recorder.recordingStatus]); // Only depend on recording status
 
   /**
    * Handle recording start/stop toggle with permission checking
@@ -366,8 +380,11 @@ export default function RecordScreen() {
         }
       }
 
-      // Start recording - reset no birds message
+      // Start recording - reset no birds message and capture current detection count
       setShowNoBirdsMessage(false);
+      setDetectionCountBeforeRecording(detections.length);
+      console.log(`📊 Capturing detection count before recording: ${detections.length}`);
+      
       try {
         await recorder.start();
       } catch (error) {
