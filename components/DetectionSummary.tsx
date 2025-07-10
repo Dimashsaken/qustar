@@ -106,7 +106,9 @@ export const DetectionSummary: React.FC<DetectionSummaryProps> = ({
           <Text style={styles.bestDetectionTitle}>Лучшее обнаружение</Text>
         </View>
         <Text style={styles.bestDetectionSpecies}>
-          {bestDetection.detection.species.replace(/_/g, ' ')}
+          {bestDetection.detection.display_name || 
+           bestDetection.detection.common_name || 
+           bestDetection.detection.species.replace(/_/g, ' ')}
         </Text>
         <Text style={styles.bestDetectionConfidence}>
           {Math.round(bestDetection.detection.confidence * 100)}% уверенности

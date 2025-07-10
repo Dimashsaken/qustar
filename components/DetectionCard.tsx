@@ -31,13 +31,24 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
   
   const confidencePercentage = Math.round(detection.detection.confidence * 100);
   
-  // Get display name with simple fallback
+  // Get display name with Russian language priority
   const getDisplayName = () => {
+    // First priority: Use display_name from BirdNET (Russian name when available)
+    if (detection.detection.display_name) {
+      return detection.detection.display_name;
+    }
+    
+    // Second priority: Use common_name from BirdNET (English fallback)
+    if (detection.detection.common_name) {
+      return detection.detection.common_name;
+    }
+    
+    // Third priority: Use database lookup
     if (birdData) {
       return birdData.common_name_ru || birdData.common_name_en || birdData.scientific_name;
     }
     
-    // Simple fallback: format the species name
+    // Final fallback: Format scientific name from species column
     return detection.detection.species.replace(/_/g, ' ');
   };
 
@@ -88,9 +99,9 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
             {getDisplayName()}
           </ThemedText>
           
-          {birdData?.scientific_name && (
+          {(detection.detection.species || birdData?.scientific_name) && (
             <ThemedText style={styles.scientificName} numberOfLines={1}>
-              {birdData.scientific_name}
+              {detection.detection.species || birdData?.scientific_name}
             </ThemedText>
           )}
           

@@ -101,6 +101,7 @@ serve(async (req: Request) => {
       body: JSON.stringify({ 
         url: signedUrlData.signedUrl,
         min_conf: 0.1, // Minimum confidence threshold
+        language: "ru", // Request Russian bird names
       }),
     });
 
@@ -182,10 +183,13 @@ serve(async (req: Request) => {
       const detections = results.map((prediction: any) => ({
         audio_id: audioId,
         user_id: audioUpload.user_id, // Include user_id for privacy
-        species: prediction.species || prediction.common_name,
+        species: prediction.scientific_name || prediction.species, // Store scientific name in existing column
         confidence: prediction.confidence,
         start_sec: prediction.start || prediction.start_time || 0,
         end_sec: prediction.end || prediction.end_time || prediction.start || 0,
+        // Only add the essential Russian language fields
+        display_name: prediction.display_name, // Russian name when available
+        common_name: prediction.common_name, // English fallback
       }));
 
       const { error: insertError } = await supabase

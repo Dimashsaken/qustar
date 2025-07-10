@@ -21,20 +21,31 @@ export interface AudioUpload {
 export interface BirdDetection {
   id: string;
   audio_id: string;
-  species: string;
+  species: string; // Scientific name (existing column)
   confidence: number;
   start_sec: number;
   end_sec: number;
+  created_at?: string;
+  // Optimized Russian language fields
+  display_name?: string; // Russian name when available
+  common_name?: string; // English fallback name
 }
 
 /**
- * BirdNET API response format
+ * BirdNET API response format (enhanced with Russian language support)
  */
 export interface BirdNetPrediction {
   species: string;
   confidence: number;
   start: number;
   end: number;
+  // Enhanced response fields from Russian-enabled BirdNET API
+  common_name?: string;
+  scientific_name?: string;
+  display_name?: string;
+  russian_name?: string;
+  start_time?: number;
+  end_time?: number;
 }
 
 /**

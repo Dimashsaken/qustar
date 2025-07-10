@@ -49,11 +49,14 @@ const fetchAudioDetections = async (userId: string): Promise<DetectionWithAudio[
     detection: {
       id: detection.id,
       audio_id: detection.audio_id,
-      species: detection.species,
+      species: detection.species, // Scientific name (existing column)
       confidence: detection.confidence,
       start_sec: detection.start_sec,
       end_sec: detection.end_sec,
       created_at: detection.created_at,
+      // Optimized Russian language fields
+      display_name: detection.display_name, // Russian name when available
+      common_name: detection.common_name, // English fallback name
     },
     audioUpload: detection.audio_uploads,
   }));
