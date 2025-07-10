@@ -38,6 +38,7 @@ function RootLayoutContent() {
         <Stack.Screen name="image/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="results" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
         <Stack.Screen name="favorites-full" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>

@@ -152,6 +152,7 @@ export default function SettingsScreen() {
               Помощь и поддержка
             </ThemedText>
             {renderSettingItem('Обратная связь', 'envelope.fill', handleOpenFeedback)}
+            {renderSettingItem('Политика конфиденциальности', 'doc.text', () => router.push('/privacy-policy'))}
             {renderSettingItem('О приложении', 'info.circle')}
           </ThemedView>
 
