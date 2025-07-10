@@ -85,33 +85,6 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
     return 'Неизвестная птица'; // "Unknown bird" in Russian
   };
 
-  // Get scientific name for display
-  const getScientificName = () => {
-    // Try database first for consistency
-    if (birdData?.scientific_name) {
-      return birdData.scientific_name;
-    }
-    
-    // Extract from species field if in "Common_Scientific" format
-    if (detection.detection.species && detection.detection.species.includes('_')) {
-      const parts = detection.detection.species.split('_');
-      if (parts.length >= 2) {
-        return parts.slice(1).join(' '); // Join back in case scientific name has spaces
-      }
-    }
-    
-    // Use species as-is if it looks scientific (genus species format)
-    if (detection.detection.species) {
-      const species = detection.detection.species.replace(/_/g, ' ');
-      // Check if it looks like a scientific name (starts with capital letter, has space)
-      if (/^[A-Z][a-z]+ [a-z]+/.test(species)) {
-        return species;
-      }
-    }
-    
-    return null;
-  };
-
   const handlePress = () => {
     if (onPress) {
       onPress();
@@ -121,7 +94,6 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
   };
 
   const displayName = getDisplayName();
-  const scientificName = getScientificName();
 
   return (
     <Pressable 
@@ -162,12 +134,6 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
             {displayName}
           </ThemedText>
           
-          {scientificName && (
-            <ThemedText style={styles.scientificName} numberOfLines={1}>
-              {scientificName}
-            </ThemedText>
-          )}
-          
           {/* Detection Time */}
           <View style={styles.timeContainer}>
             <Ionicons name="time-outline" size={12} color={Colors.light.tabIconDefault} />
@@ -175,18 +141,6 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
               {formatDetectionTime(detection.detection.start_sec, detection.detection.end_sec)}
             </ThemedText>
           </View>
-          
-          {/* Debug info for development - remove in production */}
-          {__DEV__ && (
-            <View style={styles.debugContainer}>
-              <ThemedText style={styles.debugText}>
-                BirdNET: display="{detection.detection.display_name}", common="{detection.detection.common_name}"
-              </ThemedText>
-              <ThemedText style={styles.debugText}>
-                DB: ru="{birdData?.common_name_ru}", en="{birdData?.common_name_en}"
-              </ThemedText>
-            </View>
-          )}
         </View>
 
         {/* Arrow Indicator */}
@@ -276,7 +230,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   
-  // Content Section  
+  // Content Section
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -287,12 +241,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 4,
   },
-  scientificName: {
-    fontSize: 13,
-    fontStyle: 'italic',
-    color: Colors.light.textMuted,
-    marginBottom: 6,
-  },
   timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,19 +250,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.textMuted,
     marginLeft: 4,
-  },
-  
-  // Debug Section (development only)
-  debugContainer: {
-    marginTop: 8,
-    padding: 4,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 4,
-  },
-  debugText: {
-    fontSize: 10,
-    color: '#666',
-    fontFamily: 'monospace',
   },
   
   // Arrow Section
