@@ -48,7 +48,10 @@ serve(async (req: Request) => {
       console.error('Error verifying file exists:', fileError);
       await supabase
         .from('audio_uploads')
-        .update({ status: 'failed' })
+        .update({ 
+          status: 'failed',
+          error_message: `File not found: ${fileError.message}`
+        })
         .eq('id', audioId);
       
       return new Response(
@@ -71,7 +74,10 @@ serve(async (req: Request) => {
       console.error('Error creating signed URL:', signedUrlError);
       await supabase
         .from('audio_uploads')
-        .update({ status: 'failed' })
+        .update({ 
+          status: 'failed',
+          error_message: `Signed URL creation failed: ${signedUrlError.message}`
+        })
         .eq('id', audioId);
       
       return new Response(
@@ -91,7 +97,7 @@ serve(async (req: Request) => {
       throw new Error('BIRDNET_URL environment variable not set');
     }
 
-    console.log(`Calling BirdNET at ${birdnetUrl}/analyze`);
+    console.log(`Calling BirdNET at ${birdnetUrl}/analyze with Russian language request`);
     
     const birdnetResponse = await fetch(`${birdnetUrl}/analyze`, {
       method: 'POST',
@@ -107,7 +113,7 @@ serve(async (req: Request) => {
 
     const responseText = await birdnetResponse.text();
     console.log(`BirdNET response status: ${birdnetResponse.status}`);
-    console.log(`BirdNET response: ${responseText}`);
+    console.log(`BirdNET response (first 500 chars): ${responseText.substring(0, 500)}`);
 
     if (!birdnetResponse.ok) {
       console.error(`BirdNET API error: ${birdnetResponse.status} - ${responseText}`);
@@ -115,7 +121,7 @@ serve(async (req: Request) => {
         .from('audio_uploads')
         .update({ 
           status: 'failed',
-          error_message: `BirdNET API error: ${birdnetResponse.status}`
+          error_message: `BirdNET API error: ${birdnetResponse.status} - ${responseText.substring(0, 200)}`
         })
         .eq('id', audioId);
       
@@ -139,7 +145,10 @@ serve(async (req: Request) => {
       console.error('Error parsing BirdNET response:', parseError);
       await supabase
         .from('audio_uploads')
-        .update({ status: 'failed' })
+        .update({ 
+          status: 'failed',
+          error_message: `Invalid JSON response from BirdNET: ${parseError.message}`
+        })
         .eq('id', audioId);
       
       return new Response(
@@ -154,6 +163,11 @@ serve(async (req: Request) => {
     // Handle both direct results array and wrapped response
     const results = predictions.results || predictions;
     console.log(`BirdNET returned ${results.length} detections`);
+    
+    // Enhanced logging to debug language field issues
+    if (results.length > 0) {
+      console.log(`First detection example:`, JSON.stringify(results[0], null, 2));
+    }
 
     // Get user_id from the audio upload record
     const { data: audioUpload, error: audioError } = await supabase
@@ -166,7 +180,10 @@ serve(async (req: Request) => {
       console.error('Error fetching audio upload user_id:', audioError);
       await supabase
         .from('audio_uploads')
-        .update({ status: 'failed' })
+        .update({ 
+          status: 'failed',
+          error_message: `User ID lookup failed: ${audioError?.message}`
+        })
         .eq('id', audioId);
       
       return new Response(
@@ -180,17 +197,42 @@ serve(async (req: Request) => {
 
     // Insert detection results into database
     if (results.length > 0) {
-      const detections = results.map((prediction: any) => ({
-        audio_id: audioId,
-        user_id: audioUpload.user_id, // Include user_id for privacy
-        species: prediction.scientific_name || prediction.species, // Store scientific name in existing column
-        confidence: prediction.confidence,
-        start_sec: prediction.start || prediction.start_time || 0,
-        end_sec: prediction.end || prediction.end_time || prediction.start || 0,
-        // Only add the essential Russian language fields
-        display_name: prediction.display_name, // Russian name when available
-        common_name: prediction.common_name, // English fallback
-      }));
+      const detections = results.map((prediction: any) => {
+        // Enhanced field mapping with better fallbacks and debugging
+        const commonName = prediction.common_name || null;
+        const scientificName = prediction.scientific_name || prediction.species || null;
+        const displayName = prediction.display_name || prediction.russian_name || commonName || null;
+        
+        // Extract species name from legacy format if needed
+        let speciesField = prediction.species;
+        if (!speciesField && commonName && scientificName) {
+          speciesField = `${commonName}_${scientificName}`;
+        } else if (!speciesField && scientificName) {
+          speciesField = scientificName;
+        } else if (!speciesField && commonName) {
+          speciesField = commonName;
+        }
+        
+        console.log(`Processing detection: species="${speciesField}", common_name="${commonName}", scientific_name="${scientificName}", display_name="${displayName}"`);
+        
+        return {
+          audio_id: audioId,
+          user_id: audioUpload.user_id,
+          species: speciesField || 'Unknown',
+          confidence: prediction.confidence || 0,
+          start_sec: prediction.start || prediction.start_time || 0,
+          end_sec: prediction.end || prediction.end_time || (prediction.start || prediction.start_time || 0) + 3,
+          // Russian language fields - now with better fallback handling
+          display_name: displayName,
+          common_name: commonName,
+          // Store original response for debugging
+          debug_data: {
+            original_response: prediction,
+            language_requested: 'ru',
+            timestamp: new Date().toISOString()
+          }
+        };
+      });
 
       const { error: insertError } = await supabase
         .from('detections')
@@ -200,7 +242,10 @@ serve(async (req: Request) => {
         console.error('Error inserting detections:', insertError);
         await supabase
           .from('audio_uploads')
-          .update({ status: 'failed' })
+          .update({ 
+            status: 'failed',
+            error_message: `Database insert failed: ${insertError.message}`
+          })
           .eq('id', audioId);
         
         return new Response(
@@ -211,6 +256,8 @@ serve(async (req: Request) => {
           }
         );
       }
+      
+      console.log(`Successfully inserted ${detections.length} detections with language fields`);
     }
 
     // Update status to completed
@@ -225,7 +272,11 @@ serve(async (req: Request) => {
       JSON.stringify({ 
         success: true, 
         detections: results.length,
-        audioId 
+        audioId,
+        language: 'ru',
+        debug: {
+          birdnet_response_sample: results.length > 0 ? results[0] : null
+        }
       }),
       { 
         status: 200, 

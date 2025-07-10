@@ -31,25 +31,85 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
   
   const confidencePercentage = Math.round(detection.detection.confidence * 100);
   
-  // Get display name with Russian language priority
+  // Get display name with enhanced Russian language priority and fallbacks
   const getDisplayName = () => {
     // First priority: Use display_name from BirdNET (Russian name when available)
-    if (detection.detection.display_name) {
+    if (detection.detection.display_name && detection.detection.display_name.trim()) {
       return detection.detection.display_name;
     }
     
-    // Second priority: Use common_name from BirdNET (English fallback)
-    if (detection.detection.common_name) {
+    // Second priority: Use database Russian name if BirdNET failed to provide it
+    if (birdData?.common_name_ru && birdData.common_name_ru.trim()) {
+      return birdData.common_name_ru;
+    }
+    
+    // Third priority: Use common_name from BirdNET (English fallback)
+    if (detection.detection.common_name && detection.detection.common_name.trim()) {
       return detection.detection.common_name;
     }
     
-    // Third priority: Use database lookup
-    if (birdData) {
-      return birdData.common_name_ru || birdData.common_name_en || birdData.scientific_name;
+    // Fourth priority: Use database English name
+    if (birdData?.common_name_en && birdData.common_name_en.trim()) {
+      return birdData.common_name_en;
     }
     
-    // Final fallback: Format scientific name from species column
-    return detection.detection.species.replace(/_/g, ' ');
+    // Fifth priority: Use database Kazakh name
+    if (birdData?.common_name_kz && birdData.common_name_kz.trim()) {
+      return birdData.common_name_kz;
+    }
+    
+    // Sixth priority: Use scientific name from database
+    if (birdData?.scientific_name && birdData.scientific_name.trim()) {
+      return birdData.scientific_name;
+    }
+    
+    // Final fallback: Format species name from detection
+    if (detection.detection.species) {
+      // Handle different species formats:
+      // "Common Name_Scientific Name" -> "Common Name"
+      // "Scientific_Name" -> "Scientific Name"
+      const species = detection.detection.species;
+      if (species.includes('_')) {
+        const parts = species.split('_');
+        // If first part looks like a common name (contains spaces or multiple words), use it
+        const firstPart = parts[0];
+        if (firstPart.includes(' ') || firstPart.length > 3) {
+          return firstPart;
+        }
+        // Otherwise use the full formatted name
+        return species.replace(/_/g, ' ');
+      }
+      return species;
+    }
+    
+    return 'Неизвестная птица'; // "Unknown bird" in Russian
+  };
+
+  // Get scientific name for display
+  const getScientificName = () => {
+    // Try database first for consistency
+    if (birdData?.scientific_name) {
+      return birdData.scientific_name;
+    }
+    
+    // Extract from species field if in "Common_Scientific" format
+    if (detection.detection.species && detection.detection.species.includes('_')) {
+      const parts = detection.detection.species.split('_');
+      if (parts.length >= 2) {
+        return parts.slice(1).join(' '); // Join back in case scientific name has spaces
+      }
+    }
+    
+    // Use species as-is if it looks scientific (genus species format)
+    if (detection.detection.species) {
+      const species = detection.detection.species.replace(/_/g, ' ');
+      // Check if it looks like a scientific name (starts with capital letter, has space)
+      if (/^[A-Z][a-z]+ [a-z]+/.test(species)) {
+        return species;
+      }
+    }
+    
+    return null;
   };
 
   const handlePress = () => {
@@ -60,11 +120,14 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
     }
   };
 
+  const displayName = getDisplayName();
+  const scientificName = getScientificName();
+
   return (
     <Pressable 
       style={styles.container}
       onPress={handlePress}
-      accessibilityLabel={`Bird detection: ${getDisplayName()}`}
+      accessibilityLabel={`Bird detection: ${displayName}`}
     >
       <ThemedView 
         {...(Platform.OS === 'android' ? { surface: 'surface' as const } : {})} 
@@ -96,12 +159,12 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
         {/* Bird Information */}
         <View style={styles.content}>
           <ThemedText style={styles.birdName} numberOfLines={2}>
-            {getDisplayName()}
+            {displayName}
           </ThemedText>
           
-          {(detection.detection.species || birdData?.scientific_name) && (
+          {scientificName && (
             <ThemedText style={styles.scientificName} numberOfLines={1}>
-              {detection.detection.species || birdData?.scientific_name}
+              {scientificName}
             </ThemedText>
           )}
           
@@ -112,6 +175,18 @@ export const DetectionCard: React.FC<DetectionCardProps> = ({
               {formatDetectionTime(detection.detection.start_sec, detection.detection.end_sec)}
             </ThemedText>
           </View>
+          
+          {/* Debug info for development - remove in production */}
+          {__DEV__ && (
+            <View style={styles.debugContainer}>
+              <ThemedText style={styles.debugText}>
+                BirdNET: display="{detection.detection.display_name}", common="{detection.detection.common_name}"
+              </ThemedText>
+              <ThemedText style={styles.debugText}>
+                DB: ru="{birdData?.common_name_ru}", en="{birdData?.common_name_en}"
+              </ThemedText>
+            </View>
+          )}
         </View>
 
         {/* Arrow Indicator */}
@@ -200,8 +275,8 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
   },
-
-  // Content Section
+  
+  // Content Section  
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -215,7 +290,8 @@ const styles = StyleSheet.create({
   scientificName: {
     fontSize: 13,
     fontStyle: 'italic',
-    color: Colors.light.tabIconDefault,
+    color: Colors.light.textMuted,
+    marginBottom: 6,
   },
   timeContainer: {
     flexDirection: 'row',
@@ -224,13 +300,27 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 12,
-    color: Colors.light.tabIconDefault,
+    color: Colors.light.textMuted,
     marginLeft: 4,
   },
-
+  
+  // Debug Section (development only)
+  debugContainer: {
+    marginTop: 8,
+    padding: 4,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 4,
+  },
+  debugText: {
+    fontSize: 10,
+    color: '#666',
+    fontFamily: 'monospace',
+  },
+  
   // Arrow Section
   arrowContainer: {
     justifyContent: 'center',
-    marginLeft: DesignTokens.spacing.xs,
+    alignItems: 'center',
+    paddingLeft: DesignTokens.spacing.sm,
   },
 }); 
