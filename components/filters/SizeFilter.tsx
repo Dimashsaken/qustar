@@ -11,10 +11,10 @@ interface SizeFilterProps {
 
 // Mapping of size categories to silhouette images
 const SIZE_SILHOUETTES = {
-  'very-small': require('../../assets/images/20250630_1433_Силуэт скворца_simple_compose_01jyzrkj44ed991fcm288gkwf5.png'),
-  'small-medium': require('../../assets/images/20250630_1433_Силуэт вороны_simple_compose_01jyzrm5p2ejvar1g4raa9brpw.png'),
-  'large': require('../../assets/images/20250630_1434_Силуэт гуся_simple_compose_01jyzrpehweg5rft3asfm8grm2.png'),
-  'very-large': require('../../assets/images/ChatGPT Image Jun 30, 2025, 06_53_16 PM.png'),
+  'very-small': require('../../assets/images/bird-silhouette-very-small.png'),
+  'small-medium': require('../../assets/images/bird-silhouette-small-medium.png'),
+  'large': require('../../assets/images/bird-silhouette-large.png'),
+  'very-large': require('../../assets/images/bird-silhouette-very-large.png'),
 };
 
 /**

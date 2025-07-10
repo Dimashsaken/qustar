@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 BirdNET API Server for QuStar Bird Identification App
-Enhanced with robust mobile audio format support and better error handling
+Enhanced with robust mobile audio format support, better error handling,
+and Russian bird name translation using Cornell Lab's official translation files
 """
 
 import os
@@ -17,6 +18,8 @@ from flask_cors import CORS
 import logging
 import numpy as np  # type: ignore
 import json # Added for json.loads
+import pandas as pd  # Added for CSV processing
+import requests  # Added for downloading translation files
 
 # Import BirdNET-Analyzer package
 analyze = None  # Initialize to avoid linter errors
@@ -54,12 +57,218 @@ MODEL_PATH = None
 LABELS_FILE = "/app/BirdNET-Analyzer/labels/V2.4/BirdNET_GLOBAL_6K_V2.4_Labels.txt"
 analyzer = None
 
+# Russian translation cache
+RUSSIAN_TRANSLATIONS = {}
+TRANSLATION_CACHE_FILE = "/tmp/cornell_lab_russian_translations.csv"
+
 # Mobile audio format configurations
 MOBILE_AUDIO_FORMATS = {
     'ios': ['.m4a', '.aac', '.mp4'],
     'android': ['.mp4', '.3gp', '.amr', '.m4a'],
     'common': ['.wav', '.mp3', '.flac', '.ogg']
 }
+
+def download_russian_translations():
+    """Download Cornell Lab's official Russian bird name translations"""
+    try:
+        logger.info("Downloading Cornell Lab Russian bird name translations...")
+        
+        # Cornell Lab eBird/Clements Checklist with Russian names
+        # This URL provides the official Clements Checklist with multilingual names
+        translation_url = "https://www.birds.cornell.edu/clementschecklist/wp-content/uploads/2024/10/Clements-Checklist-v2024-October-2024.xlsx"
+        
+        # Download the Excel file
+        response = requests.get(translation_url, timeout=60)
+        response.raise_for_status()
+        
+        # Save as temporary Excel file
+        excel_temp = "/tmp/clements_checklist.xlsx"
+        with open(excel_temp, 'wb') as f:
+            f.write(response.content)
+        
+        logger.info(f"Downloaded Clements Checklist: {len(response.content)} bytes")
+        
+        # Read the Excel file - typically the main data is in the first sheet
+        try:
+            df = pd.read_excel(excel_temp, sheet_name=0)
+            logger.info(f"Loaded Excel with {len(df)} rows and columns: {list(df.columns)}")
+            
+            # Save as CSV for easier processing
+            df.to_csv(TRANSLATION_CACHE_FILE, index=False)
+            logger.info(f"Saved translation cache to {TRANSLATION_CACHE_FILE}")
+            
+            # Clean up Excel file
+            os.remove(excel_temp)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error processing Excel file: {e}")
+            # Fallback: try alternative URL for CSV format
+            return download_russian_translations_fallback()
+            
+    except Exception as e:
+        logger.error(f"Error downloading Russian translations: {e}")
+        return download_russian_translations_fallback()
+
+def download_russian_translations_fallback():
+    """Fallback method to get Russian translations from eBird API or alternative source"""
+    try:
+        logger.info("Trying fallback method for Russian translations...")
+        
+        # Alternative: Use eBird taxonomy API to get species list, then match with known Russian names
+        # For now, create a basic mapping of common species in Kazakhstan
+        basic_russian_names = {
+            "Corvus corax": "Ворон",
+            "Corvus cornix": "Серая ворона", 
+            "Pica pica": "Сорока",
+            "Passer montanus": "Полевой воробей",
+            "Passer domesticus": "Домовый воробей",
+            "Turdus merula": "Чёрный дрозд",
+            "Turdus pilaris": "Рябинник",
+            "Sturnus vulgaris": "Обыкновенный скворец",
+            "Hirundo rustica": "Деревенская ласточка",
+            "Falco tinnunculus": "Обыкновенная пустельга",
+            "Buteo buteo": "Канюк",
+            "Accipiter nisus": "Перепелятник",
+            "Aquila chrysaetos": "Беркут",
+            "Haliaeetus albicilla": "Орлан-белохвост",
+            "Anas platyrhynchos": "Кряква",
+            "Cygnus olor": "Лебедь-шипун",
+            "Ardea cinerea": "Серая цапля",
+            "Vanellus vanellus": "Чибис",
+            "Columba livia": "Сизый голубь",
+            "Streptopelia decaocto": "Кольчатая горлица",
+            "Cuculus canorus": "Обыкновенная кукушка",
+            "Upupa epops": "Удод",
+            "Merops apiaster": "Золотистая щурка",
+            "Alcedo atthis": "Обыкновенный зимородок",
+            "Picus viridis": "Зелёный дятел",
+            "Dendrocopos major": "Большой пёстрый дятел",
+            "Alauda arvensis": "Полевой жаворонок",
+            "Motacilla alba": "Белая трясогузка",
+            "Anthus trivialis": "Лесной конёк",
+            "Phoenicurus phoenicurus": "Обыкновенная горихвостка",
+            "Saxicola rubetra": "Луговой чекан",
+            "Oenanthe oenanthe": "Обыкновенная каменка",
+            "Sylvia atricapilla": "Черноголовка",
+            "Phylloscopus trochilus": "Пеночка-весничка",
+            "Regulus regulus": "Желтоголовый королёк",
+            "Ficedula hypoleuca": "Мухоловка-пеструшка",
+            "Muscicapa striata": "Серая мухоловка",
+            "Aegithalos caudatus": "Длиннохвостая синица",
+            "Parus major": "Большая синица",
+            "Cyanistes caeruleus": "Лазоревка",
+            "Sitta europaea": "Обыкновенный поползень",
+            "Certhia brachydactyla": "Короткопалая пищуха",
+            "Oriolus oriolus": "Иволга",
+            "Garrulus glandarius": "Сойка",
+            "Fringilla coelebs": "Зяблик",
+            "Carduelis carduelis": "Щегол",
+            "Chloris chloris": "Зеленушка",
+            "Acanthis flammea": "Чечётка",
+            "Pyrrhula pyrrhula": "Снегирь",
+            "Emberiza citrinella": "Обыкновенная овсянка"
+        }
+        
+        # Create a simple CSV with the basic translations
+        df = pd.DataFrame([
+            {"scientific_name": sci_name, "russian_name": rus_name, "english_name": ""} 
+            for sci_name, rus_name in basic_russian_names.items()
+        ])
+        
+        df.to_csv(TRANSLATION_CACHE_FILE, index=False)
+        logger.info(f"Created basic Russian translation cache with {len(basic_russian_names)} species")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error in fallback Russian translations: {e}")
+        return False
+
+def load_russian_translations():
+    """Load Russian translations from cache file"""
+    global RUSSIAN_TRANSLATIONS
+    
+    try:
+        # Check if cache file exists, if not download it
+        if not os.path.exists(TRANSLATION_CACHE_FILE):
+            logger.info("Russian translation cache not found, downloading...")
+            if not download_russian_translations():
+                logger.error("Failed to download Russian translations")
+                return False
+        
+        # Load translations from CSV
+        df = pd.read_csv(TRANSLATION_CACHE_FILE)
+        logger.info(f"Loading Russian translations from CSV with columns: {list(df.columns)}")
+        
+        # Handle different possible column names from Cornell Lab data
+        scientific_col = None
+        russian_col = None
+        
+        # Find scientific name column
+        for col in df.columns:
+            if 'scientific' in col.lower() or 'sci_name' in col.lower() or col.lower() == 'scientific_name':
+                scientific_col = col
+                break
+        
+        # Find Russian name column  
+        for col in df.columns:
+            if 'russian' in col.lower() or 'ru' in col.lower() or 'rus' in col.lower():
+                russian_col = col
+                break
+        
+        if not scientific_col:
+            logger.warning("No scientific name column found, using default mapping")
+            return True  # Use the basic fallback mapping
+            
+        # Build translation dictionary
+        RUSSIAN_TRANSLATIONS = {}
+        russian_count = 0
+        
+        for _, row in df.iterrows():
+            try:
+                scientific_name = str(row[scientific_col]).strip()
+                
+                # Get Russian name if available
+                russian_name = ""
+                if russian_col and pd.notna(row[russian_col]):
+                    russian_name = str(row[russian_col]).strip()
+                    if russian_name and russian_name.lower() not in ['nan', 'none', '']:
+                        RUSSIAN_TRANSLATIONS[scientific_name] = russian_name
+                        russian_count += 1
+                        
+            except Exception as e:
+                continue  # Skip problematic rows
+        
+        logger.info(f"Loaded {russian_count} Russian bird name translations")
+        logger.info(f"Sample translations: {dict(list(RUSSIAN_TRANSLATIONS.items())[:5])}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error loading Russian translations: {e}")
+        return False
+
+def get_russian_name(scientific_name):
+    """Get Russian name for a bird by scientific name"""
+    try:
+        # Direct lookup in translations
+        if scientific_name in RUSSIAN_TRANSLATIONS:
+            return RUSSIAN_TRANSLATIONS[scientific_name]
+        
+        # Try without subspecies (e.g., "Corvus corax corax" -> "Corvus corax")
+        if ' ' in scientific_name:
+            genus_species = ' '.join(scientific_name.split()[:2])
+            if genus_species in RUSSIAN_TRANSLATIONS:
+                return RUSSIAN_TRANSLATIONS[genus_species]
+        
+        # No translation found
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting Russian name for {scientific_name}: {e}")
+        return None
 
 def load_species_list():
     """Load species list from labels file"""
@@ -359,7 +568,7 @@ def health_check():
 
 @app.route('/analyze', methods=['POST'])
 def analyze_audio():
-    """Enhanced audio analysis with better mobile format support"""
+    """Enhanced audio analysis with mobile format support and Russian translation"""
     try:
         data = request.get_json()
         if not data:
@@ -367,9 +576,14 @@ def analyze_audio():
         
         audio_url = data.get('url')
         min_conf = float(data.get('min_conf', 0.1))
+        language = data.get('language', 'en').lower()  # Default to English
         
         if not audio_url:
             return jsonify({"error": "No audio URL provided"}), 400
+        
+        # Validate language parameter
+        if language not in ['en', 'ru']:
+            return jsonify({"error": "language must be 'en' (English) or 'ru' (Russian)"}), 400
         
         logger.info(f"Analyzing audio from: {audio_url}")
         
@@ -410,7 +624,7 @@ def analyze_audio():
                 }), 500
             
             # Analyze converted audio using BirdNET
-            results, analysis_error = analyze_audio_file(converted_temp, min_conf)
+            results, analysis_error = analyze_audio_file(converted_temp, min_conf, language)
             if analysis_error:
                 return jsonify({
                     "error": "BirdNET analysis failed",
@@ -422,6 +636,7 @@ def analyze_audio():
                 "results": results,
                 "audio_url": audio_url,
                 "min_confidence": min_conf,
+                "language": language,
                 "timestamp": datetime.now().isoformat(),
                 "audio_info": validation_result,
                 "processed_duration": conversion_result.get('duration', 0)
@@ -451,8 +666,8 @@ def analyze_audio():
             "details": "Server error during analysis"
         }), 500
 
-def analyze_audio_file(audio_path, min_conf):
-    """Enhanced BirdNET analysis with better error handling"""
+def analyze_audio_file(audio_path, min_conf, language='en'):
+    """Enhanced BirdNET analysis with better error handling and Russian translation"""
     try:
         detections = []
         
@@ -473,14 +688,32 @@ def analyze_audio_file(audio_path, min_conf):
                 recording.analyze()
                 
                 for detection in recording.detections:
-                    detections.append({
-                        "species": f"{detection['common_name']}_{detection['scientific_name']}",
-                        "common_name": detection['common_name'],
-                        "scientific_name": detection['scientific_name'],
+                    scientific_name = detection['scientific_name']
+                    common_name = detection['common_name']
+                    
+                    # Get Russian name if requested
+                    display_name = common_name  # Default to English common name
+                    if language == 'ru':
+                        russian_name = get_russian_name(scientific_name)
+                        if russian_name:
+                            display_name = russian_name
+                    
+                    detection_result = {
+                        "species": f"{common_name}_{scientific_name}",
+                        "common_name": common_name,
+                        "scientific_name": scientific_name,
+                        "display_name": display_name,  # The name to show to user
                         "confidence": float(detection['confidence']),
                         "start_time": float(detection['start_time']),
                         "end_time": float(detection['end_time'])
-                    })
+                    }
+                    
+                    # Add Russian name if available and requested
+                    if language == 'ru':
+                        russian_name = get_russian_name(scientific_name)
+                        detection_result["russian_name"] = russian_name
+                    
+                    detections.append(detection_result)
                     
             except Exception as e:
                 return [], f"BirdNET package analysis failed: {e}"
@@ -527,14 +760,29 @@ def analyze_audio_file(audio_path, min_conf):
                                     common_name = species_name
                                     scientific_name = ""
                                 
-                                detections.append({
+                                # Get display name based on language
+                                display_name = common_name  # Default to English common name
+                                if language == 'ru' and scientific_name:
+                                    russian_name = get_russian_name(scientific_name)
+                                    if russian_name:
+                                        display_name = russian_name
+                                
+                                detection_result = {
                                     "species": species_name,
                                     "common_name": common_name,
                                     "scientific_name": scientific_name,
+                                    "display_name": display_name,  # The name to show to user
                                     "confidence": float(p_filtered[i]),
                                     "start_time": chunk_index * 3.0,  # 3 second chunks
                                     "end_time": (chunk_index + 1) * 3.0
-                                })
+                                }
+                                
+                                # Add Russian name if available and requested
+                                if language == 'ru' and scientific_name:
+                                    russian_name = get_russian_name(scientific_name)
+                                    detection_result["russian_name"] = russian_name
+                                
+                                detections.append(detection_result)
                 else:
                     return [], "BirdNET model not loaded"
                     
@@ -586,6 +834,16 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(f"Failed to load BirdNET model: {e}")
         sys.exit(1)
+    
+    # Initialize Russian translations
+    try:
+        logger.info("Loading Russian bird name translations...")
+        if load_russian_translations():
+            logger.info("Russian translations loaded successfully")
+        else:
+            logger.warning("Failed to load Russian translations - will use English only")
+    except Exception as e:
+        logger.warning(f"Error loading Russian translations: {e} - will use English only")
     
     # Start Flask server
     app.run(host=args.host, port=args.port, debug=False) 

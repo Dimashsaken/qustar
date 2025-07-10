@@ -4,6 +4,7 @@
     "slug": "qustar",
     "version": "1.0.1",
     "orientation": "portrait",
+    "icon": "./assets/images/qustar-logo.png",
     "scheme": "qustar",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -21,12 +22,16 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "package": "com.dimash_saken.qustar"
+      "package": "com.dimash_saken.qustar",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/qustar-logo.png",
+        "backgroundColor": "#ffffff"
+      }
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/red-book-icon.png"
+      "favicon": "./assets/images/qustar-logo.png"
     },
     "plugins": [
       "expo-router",

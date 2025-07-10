@@ -2,46 +2,77 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 
 const { height } = Dimensions.get('window');
 
+// Hide the default expo navigation header
+export const unstable_settings = {
+  headerShown: false,
+};
+
 /**
  * Authentication screen component - first screen users see
- * Handles both sign-in and sign-up flows with modern white theme
+ * Handles sign-in, sign-up, and password recovery flows with modern white theme
  * @returns JSX.Element - Authentication screen
  */
 export default function AuthScreen() {
-  const { signIn, signUp, loading } = useAuth();
+  const { signIn, signUp, resetPassword, loading } = useAuth();
   
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const resetForm = () => {
     setEmail('');
     setPassword('');
     setFullName('');
     setConfirmPassword('');
+    setIsResettingPassword(false);
   };
 
   const handleSubmit = async () => {
-    if (!email || !password) {
+    if (!email) {
+      Alert.alert('Ошибка', 'Пожалуйста, введите email');
+      return;
+    }
+
+    if (mode === 'forgot') {
+      try {
+        setIsResettingPassword(true);
+        const error = await resetPassword(email);
+        if (error) {
+          Alert.alert('Ошибка', error.message);
+          return;
+        }
+        
+        // Navigate directly to reset password page
+        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+      } catch (error) {
+        Alert.alert('Ошибка', 'Не удалось отправить письмо. Попробуйте снова.');
+      } finally {
+        setIsResettingPassword(false);
+      }
+      return;
+    }
+
+    if (!password) {
       Alert.alert('Ошибка', 'Пожалуйста, заполните все поля');
       return;
     }
@@ -94,7 +125,23 @@ export default function AuthScreen() {
   };
 
   const toggleMode = () => {
-    setMode(mode === 'signin' ? 'signup' : 'signin');
+    if (mode === 'signin') {
+      setMode('signup');
+    } else if (mode === 'signup') {
+      setMode('signin');
+    } else {
+      setMode('signin');
+    }
+    resetForm();
+  };
+
+  const handleForgotPassword = () => {
+    setMode('forgot');
+    resetForm();
+  };
+
+  const handleBackToSignIn = () => {
+    setMode('signin');
     resetForm();
   };
 
@@ -120,9 +167,6 @@ export default function AuthScreen() {
               <View style={styles.logoContainer}>
                 <Text style={styles.appTitle}>Qustar</Text>
               </View>
-              <Text style={styles.subtitle}>
-                Птицы Казахстана
-              </Text>
               <Text style={styles.description}>
                 Откройте для себя удивительный мир пернатых
               </Text>
@@ -132,13 +176,13 @@ export default function AuthScreen() {
             <View style={styles.authCard}>
               <View style={styles.formHeader}>
                 <Text style={styles.formTitle}>
-                  {mode === 'signin' ? 'Добро пожаловать!' : 'Регистрация'}
+                  {mode === 'signin' ? 'Добро пожаловать!' : 
+                   mode === 'signup' ? 'Регистрация' : 'Восстановление пароля'}
                 </Text>
                 <Text style={styles.formSubtitle}>
-                  {mode === 'signin' 
-                    ? 'Войдите в свой аккаунт' 
-                    : 'Создайте новый аккаунт'
-                  }
+                  {mode === 'signin' ? 'Войдите в свой аккаунт' : 
+                   mode === 'signup' ? 'Создайте новый аккаунт' :
+                   'Введите email для получения инструкций'}
                 </Text>
               </View>
 
@@ -176,20 +220,31 @@ export default function AuthScreen() {
                   />
                 </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>
-                    Пароль
-                  </Text>
-                  <TextInput
-                    style={styles.input}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Введите пароль"
-                    placeholderTextColor="#999"
-                    secureTextEntry
-                    autoComplete="password"
-                  />
-                </View>
+                {mode !== 'forgot' && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>
+                      Пароль
+                    </Text>
+                    <View style={styles.passwordContainer}>
+                      <TextInput
+                        style={styles.input}
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="Введите пароль"
+                        placeholderTextColor="#999"
+                        secureTextEntry
+                        autoComplete="password"
+                      />
+                      {mode === 'signin' && (
+                        <Pressable onPress={handleForgotPassword} style={styles.forgotPasswordButton}>
+                          <Text style={styles.forgotPasswordText}>
+                            Забыли пароль?
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
+                )}
 
                 {mode === 'signup' && (
                   <View style={styles.inputGroup}>
@@ -209,36 +264,47 @@ export default function AuthScreen() {
                 )}
 
                 <Pressable
-                  style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                  style={[styles.submitButton, (loading || isResettingPassword) && styles.submitButtonDisabled]}
                   onPress={handleSubmit}
-                  disabled={loading}
+                  disabled={loading || isResettingPassword}
                 >
                   <LinearGradient
-                    colors={['#007AFF', '#0056CC']}
+                    colors={['#4285F4', '#1565C0']}
                     style={styles.submitButtonGradient}
                   >
-                    {loading ? (
+                    {(loading || isResettingPassword) ? (
                       <ActivityIndicator color="white" />
                     ) : (
                       <Text style={styles.submitButtonText}>
-                        {mode === 'signin' ? 'Войти' : 'Создать аккаунт'}
+                        {mode === 'signin' ? 'Войти' : 
+                         mode === 'signup' ? 'Создать аккаунт' : 'Отправить код'}
                       </Text>
                     )}
                   </LinearGradient>
                 </Pressable>
 
                 <View style={styles.switchContainer}>
-                  <Text style={styles.switchText}>
-                    {mode === 'signin' 
-                      ? 'Нет аккаунта? ' 
-                      : 'Уже есть аккаунт? '
-                    }
-                  </Text>
-                  <Pressable onPress={toggleMode}>
-                    <Text style={styles.switchLink}>
-                      {mode === 'signin' ? 'Зарегистрироваться' : 'Войти'}
-                    </Text>
-                  </Pressable>
+                  {mode === 'forgot' ? (
+                    <Pressable onPress={handleBackToSignIn}>
+                      <Text style={styles.switchLink}>
+                        Вернуться к входу
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <>
+                      <Text style={styles.switchText}>
+                        {mode === 'signin' 
+                          ? 'Нет аккаунта? ' 
+                          : 'Уже есть аккаунт? '
+                        }
+                      </Text>
+                      <Pressable onPress={toggleMode}>
+                        <Text style={styles.switchLink}>
+                          {mode === 'signin' ? 'Зарегистрироваться' : 'Войти'}
+                        </Text>
+                      </Pressable>
+                    </>
+                  )}
                 </View>
               </View>
             </View>
@@ -327,6 +393,9 @@ const styles = StyleSheet.create({
   inputGroup: {
     gap: 6,
   },
+  passwordContainer: {
+    gap: 4,
+  },
   label: {
     fontSize: 16,
     marginLeft: 4,
@@ -354,7 +423,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginTop: 8,
-    shadowColor: '#007AFF',
+    shadowColor: '#4285F4',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -393,5 +462,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
   },
 }); 

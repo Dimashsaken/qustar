@@ -13,6 +13,7 @@ import {
     View
 } from 'react-native';
 
+import { ChangePasswordForm } from '../components/ChangePasswordForm';
 import { FeedbackForm } from '../components/FeedbackForm';
 import { ThemedText } from '../components/ThemedText';
 import { ThemedView } from '../components/ThemedView';
@@ -27,6 +28,7 @@ import { useAuth } from '../hooks/useAuth';
 export default function SettingsScreen() {
   const { signOut } = useAuth();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   /**
    * Handles back navigation
@@ -47,6 +49,20 @@ export default function SettingsScreen() {
    */
   const handleCloseFeedback = () => {
     setShowFeedbackModal(false);
+  };
+
+  /**
+   * Handles opening change password modal
+   */
+  const handleOpenChangePassword = () => {
+    setShowChangePasswordModal(true);
+  };
+
+  /**
+   * Handles closing change password modal
+   */
+  const handleCloseChangePassword = () => {
+    setShowChangePasswordModal(false);
   };
 
   /**
@@ -127,7 +143,7 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Аккаунт
             </ThemedText>
-            {renderSettingItem('Изменить пароль', 'key.fill')}
+            {renderSettingItem('Изменить пароль', 'key.fill', handleOpenChangePassword)}
           </ThemedView>
 
           {/* Help & Support */}
@@ -160,6 +176,19 @@ export default function SettingsScreen() {
             onCancel={handleCloseFeedback}
           />
         </Modal>
+
+                 {/* Change Password Modal */}
+         <Modal
+           animationType="slide"
+           presentationStyle="pageSheet"
+           visible={showChangePasswordModal}
+           onRequestClose={handleCloseChangePassword}
+         >
+           <ChangePasswordForm
+             onSuccess={handleCloseChangePassword}
+             onCancel={handleCloseChangePassword}
+           />
+         </Modal>
       </SafeAreaView>
     </>
   );

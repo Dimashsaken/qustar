@@ -170,14 +170,72 @@ export const useAuth = () => {
   };
 
   /**
-   * Request password reset email
+   * Request password reset OTP code via email
    * @param email - User's email address
    * @returns Promise<AuthError | null>
    */
   const resetPassword = async (email: string): Promise<AuthError | null> => {
     try {
       setError(null);
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: undefined, // Don't send link, only OTP
+      });
+      if (error) throw error;
+      return null;
+    } catch (err) {
+      const authError = { message: (err as Error).message };
+      setError(authError);
+      return authError;
+    }
+  };
+
+  /**
+   * Verify OTP code for password reset
+   * @param email - User's email address
+   * @param token - OTP token
+   * @returns Promise<AuthResponse>
+   */
+  const verifyPasswordResetOtp = async (
+    email: string,
+    token: string
+  ): Promise<AuthResponse> => {
+    try {
+      setError(null);
+      setLoading(true);
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'recovery',
+      });
+
+      if (error) throw error;
+
+      return { user: data.user ? {
+        id: data.user.id,
+        email: data.user.email,
+        user_metadata: data.user.user_metadata
+      } : null, error: null };
+    } catch (err) {
+      const authError = { message: (err as Error).message };
+      setError(authError);
+      return { user: null, error: authError };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Update password after OTP verification
+   * @param newPassword - New password
+   * @returns Promise<AuthError | null>
+   */
+  const updatePasswordAfterReset = async (newPassword: string): Promise<AuthError | null> => {
+    try {
+      setError(null);
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
       if (error) throw error;
       return null;
     } catch (err) {
@@ -244,6 +302,26 @@ export const useAuth = () => {
     }
   };
 
+  /**
+   * Change password for authenticated user
+   * @param newPassword - New password
+   * @returns Promise<AuthError | null>
+   */
+  const changePassword = async (newPassword: string): Promise<AuthError | null> => {
+    try {
+      setError(null);
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (error) throw error;
+      return null;
+    } catch (err) {
+      const authError = { message: (err as Error).message };
+      setError(authError);
+      return authError;
+    }
+  };
+
   return {
     user,
     session,
@@ -253,6 +331,9 @@ export const useAuth = () => {
     signIn,
     signOut,
     resetPassword,
+    verifyPasswordResetOtp,
+    updatePasswordAfterReset,
+    changePassword,
     verifyOtp,
     resendOtp,
     isAuthenticated: !!user,

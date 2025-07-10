@@ -15,6 +15,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 
+// Hide the default expo navigation header
+export const unstable_settings = {
+  headerShown: false,
+};
+
 /**
  * Email verification screen for OTP verification after signup
  * @returns JSX.Element - Email verification screen
@@ -44,6 +49,9 @@ export default function VerifyEmailScreen() {
    * Handles OTP input change
    */
   const handleOtpChange = (value: string, index: number) => {
+    // Check if OTP is already complete and prevent further input
+    const currentOtpFilled = otp.filter(digit => digit !== '').length;
+    
     if (value.length > 1) {
       // Handle paste
       const pastedOtp = value.slice(0, 6).split('');
@@ -55,18 +63,34 @@ export default function VerifyEmailScreen() {
       });
       setOtp(newOtp);
       
-      // Focus last filled input or next empty
-      const lastIndex = Math.min(pastedOtp.length - 1, 5);
-      inputRefs.current[lastIndex]?.focus();
+      // Check if OTP is complete after paste
+      const filledDigits = newOtp.filter(digit => digit !== '').length;
+      if (filledDigits === 6) {
+        // Dismiss keyboard by blurring all inputs
+        inputRefs.current.forEach(ref => ref?.blur());
+      } else {
+        // Focus last filled input or next empty
+        const lastIndex = Math.min(pastedOtp.length - 1, 5);
+        inputRefs.current[lastIndex]?.focus();
+      }
     } else {
-      // Handle single digit
-      const newOtp = [...otp];
-      newOtp[index] = value;
-      setOtp(newOtp);
-      
-      // Move to next input
-      if (value && index < 5) {
-        inputRefs.current[index + 1]?.focus();
+      // Handle single digit input
+      if (value === '' || currentOtpFilled < 6 || otp[index] !== '') {
+        const newOtp = [...otp];
+        newOtp[index] = value;
+        setOtp(newOtp);
+        
+        if (value) {
+          // Check if this completes the OTP
+          const filledDigits = newOtp.filter(digit => digit !== '').length;
+          if (filledDigits === 6) {
+            // Dismiss keyboard by blurring all inputs
+            inputRefs.current.forEach(ref => ref?.blur());
+          } else if (index < 5) {
+            // Move to next input
+            inputRefs.current[index + 1]?.focus();
+          }
+        }
       }
     }
   };
@@ -169,7 +193,7 @@ export default function VerifyEmailScreen() {
             {/* Back Button */}
             <Pressable onPress={handleGoBack} style={styles.backButton}>
               <Text style={styles.backButtonText}>
-                ← Назад
+                ←
               </Text>
             </Pressable>
 
