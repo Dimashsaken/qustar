@@ -1,426 +1,162 @@
 /**
  * BirdNET Audio Recording Hook
  * Handles audio recording, uploading to Supabase, and triggering BirdNET analysis
- * Uses expo-audio for recording and integrates with the QuStar authentication system
+ * Uses expo-av's Audio.Recording API
  */
 
-import { AudioModule, RecordingPresets, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
+import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Linking } from 'react-native';
 import { supabase } from '../lib/supabaseClient';
 import type { AudioRecorderHook, PermissionStatus, RecordingError, RecordingStatus } from '../types/audio';
 import { useAuth } from './useAuth';
 
-// Custom recording settings optimized for bird sounds
-const BIRD_RECORDING_PRESET = {
-  ...RecordingPresets.HIGH_QUALITY,
-  android: {
-    ...RecordingPresets.HIGH_QUALITY.android,
-    sampleRate: 48000, // BirdNET requirement
-    numberOfChannels: 1, // Mono for smaller files
-    bitRate: 128000,
-  },
-  ios: {
-    ...RecordingPresets.HIGH_QUALITY.ios,
-    sampleRate: 48000,
-    numberOfChannels: 1,
-    bitRate: 128000,
-  },
-};
-
 /**
- * Hook for recording audio and triggering BirdNET analysis
- * Manages the complete workflow from recording to species identification
+ * Hook for recording audio, uploading, and triggering BirdNET analysis
+ * Uses expo-av's Audio.Recording API
  * @returns Audio recorder interface with recording controls and status
  */
 export const useBirdnetRecorder = (): AudioRecorderHook => {
   const { user } = useAuth();
-  const recorder = useAudioRecorder(BIRD_RECORDING_PRESET);
-  const recorderState = useAudioRecorderState(recorder);
-  
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>('idle');
   const [duration, setDuration] = useState(0);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus | undefined>(undefined);
   const [lastError, setLastError] = useState<RecordingError | null>(null);
+  const [uri, setUri] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /**
-   * Check current microphone permission status
-   */
+  // Custom recording options for bird sounds, based on HIGH_QUALITY preset
+  const BIRD_RECORDING_OPTIONS = {
+    ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+    android: { ...Audio.RecordingOptionsPresets.HIGH_QUALITY.android, sampleRate: 48000, numberOfChannels: 1 },
+    ios: { ...Audio.RecordingOptionsPresets.HIGH_QUALITY.ios, sampleRate: 48000, numberOfChannels: 1 },
+    web: { ...Audio.RecordingOptionsPresets.HIGH_QUALITY.web },
+    isMeteringEnabled: false,
+  };
+
+  /** Check current microphone permission status */
   const checkPermissions = useCallback(async (): Promise<PermissionStatus> => {
     try {
-      const { status } = await AudioModule.getRecordingPermissionsAsync();
-      const permStatus = status as PermissionStatus;
-      setPermissionStatus(permStatus);
-      return permStatus;
-    } catch (error) {
-      console.error('Error checking permissions:', error);
+      const { status } = await Audio.getPermissionsAsync();
+      setPermissionStatus(status as PermissionStatus);
+      return status as PermissionStatus;
+    } catch {
       setPermissionStatus('undetermined');
       return 'undetermined';
     }
   }, []);
 
-  /**
-   * Request microphone permissions with user-friendly guidance
-   */
+  /** Request microphone permissions */
   const requestPermissions = useCallback(async (showAlerts: boolean = true): Promise<boolean> => {
     try {
-      const currentStatus = await checkPermissions();
-      
-      if (currentStatus === 'granted') {
-        return true;
-      }
-
-      if (currentStatus === 'blocked') {
-        if (showAlerts) {
-          Alert.alert(
-            'Доступ к микрофону необходим',
-            'Для записи звуков птиц откройте настройки устройства и разрешите доступ к микрофону.',
-            [
-              { text: 'Отмена', style: 'cancel' },
-              { 
-                text: 'Открыть настройки', 
-                onPress: () => {
-                  Linking.openSettings();
-                }
-              },
-            ]
-          );
-        }
-        return false;
-      }
-
-      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
-      const newStatus = granted ? 'granted' : 'denied';
-      setPermissionStatus(newStatus);
-      
+      const { status, granted } = await Audio.requestPermissionsAsync();
+      setPermissionStatus(status as PermissionStatus);
       if (!granted && showAlerts) {
-        Alert.alert(
-          'Разрешение необходимо',
-          'Доступ к микрофону нужен для записи звуков птиц. Пожалуйста, разрешите доступ в настройках устройства.',
-          [
-            { text: 'Отмена', style: 'cancel' },
-            { 
-              text: 'Открыть настройки', 
-              onPress: () => {
-                Linking.openSettings();
-              }
-            },
-          ]
-        );
+        Alert.alert('Разрешение необходимо', 'Доступ к микрофону нужен для записи звуков птиц. Пожалуйста, разрешите доступ в настройках устройства.', [
+          { text: 'Отмена', style: 'cancel' },
+          { text: 'Открыть настройки', onPress: () => Linking.openSettings() },
+        ]);
       }
-      
       return granted;
     } catch (error) {
-      console.error('Error requesting permissions:', error);
-      setLastError({
-        code: 'PERMISSION_ERROR',
-        message: 'Failed to request microphone permissions',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        isRecoverable: true,
-      });
-      return false;
-    }
-  }, [checkPermissions]);
-
-  /**
-   * Validate recorded audio file before upload
-   */
-  const validateAudioFile = useCallback(async (uri: string): Promise<boolean> => {
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      
-      if (!fileInfo.exists) {
-        setLastError({
-          code: 'FILE_NOT_FOUND',
-          message: 'Recording file not found',
-          isRecoverable: false,
-        });
-        return false;
-      }
-
-      // Check minimum file size (1KB = roughly 0.1 seconds of audio)
-      if (fileInfo.size < 1024) {
-        setLastError({
-          code: 'FILE_TOO_SMALL',
-          message: 'Recording is too short or empty',
-          details: `File size: ${fileInfo.size} bytes`,
-          isRecoverable: false,
-        });
-        return false;
-      }
-
-      // Check maximum file size (50MB to prevent huge uploads)
-      if (fileInfo.size > 50 * 1024 * 1024) {
-        setLastError({
-          code: 'FILE_TOO_LARGE',
-          message: 'Recording is too large',
-          details: `File size: ${Math.round(fileInfo.size / 1024 / 1024)}MB`,
-          isRecoverable: false,
-        });
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error validating audio file:', error);
-      setLastError({
-        code: 'VALIDATION_ERROR',
-        message: 'Failed to validate recording',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        isRecoverable: false,
-      });
+      setLastError({ code: 'PERMISSION_ERROR', message: 'Failed to request microphone permissions', details: error instanceof Error ? error.message : 'Unknown error', isRecoverable: true });
       return false;
     }
   }, []);
 
-  // Silently check permission status on mount (don't request)
-  useEffect(() => {
-    let mounted = true;
-    
-    const initializePermissions = async () => {
-      if (mounted) {
-        await checkPermissions();
-      }
-    };
-    
-    initializePermissions();
-    
-    return () => {
-      mounted = false;
-    };
-  }, []); // No dependencies to prevent infinite loop
-
-  // Monitor recording state
-  useEffect(() => {
-    if (recorderState.isRecording) {
-      // Duration will be tracked via manual timer if needed
-      // or from the recorder state when available
-    }
-  }, [recorderState.isRecording]);
-
-  /**
-   * Start audio recording with enhanced error handling
-   */
+  /** Start audio recording */
   const start = useCallback(async () => {
     try {
       setLastError(null);
-      
-      if (!user) {
-        throw new Error('User must be authenticated to record');
-      }
-
-      // Check current permission status first - only request if not already granted
+      if (!user) throw new Error('User must be authenticated to record');
       const currentStatus = await checkPermissions();
       if (currentStatus !== 'granted') {
         const hasPermission = await requestPermissions();
-        if (!hasPermission) {
-          throw new Error('Microphone permission required');
-        }
+        if (!hasPermission) throw new Error('Microphone permission required');
       }
-
-      // Prepare and start recording
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-      setRecordingStatus('recording');
-      setDuration(0);
-
-      console.log('🎙️ Started recording audio with optimized settings');
-    } catch (error) {
-      console.error('Failed to start recording:', error);
-      setRecordingStatus('error');
-      setLastError({
-        code: 'RECORDING_START_FAILED',
-        message: 'Failed to start recording',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        isRecoverable: true,
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording: newRecording } = await Audio.Recording.createAsync(BIRD_RECORDING_OPTIONS, (status) => {
+        setDuration(status.durationMillis || 0);
       });
+      setRecording(newRecording);
+      setRecordingStatus('recording');
+      setUri(null);
+      timerRef.current = setInterval(async () => {
+        if (newRecording) {
+          const status = await newRecording.getStatusAsync();
+          setDuration(status.durationMillis || 0);
+        }
+      }, 200);
+    } catch (error) {
+      setRecordingStatus('error');
+      setLastError({ code: 'RECORDING_START_FAILED', message: 'Failed to start recording', details: error instanceof Error ? error.message : 'Unknown error', isRecoverable: true });
       throw error;
     }
-  }, [recorder, user, requestPermissions, checkPermissions]);
+  }, [user, checkPermissions, requestPermissions]);
 
-  /**
-   * Stop recording and trigger BirdNET analysis with retry mechanism
-   */
-  const stop = useCallback(async (userId: string): Promise<string> => {
-    let audioUploadId: string | null = null;
-    
+  /** Stop recording, upload audio, and trigger BirdNET analysis */
+  const stop = useCallback(async (): Promise<string> => {
+    if (!recording) throw new Error('No active recording');
     try {
       setRecordingStatus('processing');
-      setLastError(null);
-
-      // Stop recording
-      await recorder.stop();
-      
-      if (!recorder.uri) {
-        throw new Error('No recording URI available');
-      }
-
-      console.log('🎙️ Stopped recording, validating file...');
-
-      // Validate audio file
-      const isValid = await validateAudioFile(recorder.uri);
-      if (!isValid) {
-        throw new Error(lastError?.message || 'Audio validation failed');
-      }
-
-      // Read audio file as binary data
-      const audioData = await FileSystem.readAsStringAsync(recorder.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      if (!audioData || audioData.length === 0) {
-        throw new Error('Audio file is empty or could not be read');
-      }
-
-      console.log(`📁 Audio file size: ${Math.round(audioData.length * 0.75 / 1024)}KB`);
-
-      // Create storage path with user folder structure
+      if (timerRef.current) clearInterval(timerRef.current);
+      await recording.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      const fileUri = recording.getURI();
+      setRecording(null);
+      setDuration(0);
+      setUri(fileUri || null);
+      if (!fileUri) throw new Error('Recording URI not found');
+      // Upload audio to Supabase Storage
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!fileInfo.exists || !fileInfo.size) throw new Error('Audio file not found or empty');
+      const fileData = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
       const timestamp = Date.now();
-      const storagePath = `${userId}/${timestamp}.m4a`;
-
-      console.log(`📤 Uploading audio to ${storagePath}`);
-
-      // Convert base64 to binary for upload
-      const binaryData = Uint8Array.from(atob(audioData), c => c.charCodeAt(0));
-
-      // Upload to Supabase Storage with retry logic
-      let uploadSuccess = false;
-      let retryCount = 0;
-      const maxRetries = 3;
-
-      while (!uploadSuccess && retryCount < maxRetries) {
-        try {
-          const { error: uploadError } = await supabase.storage
-            .from('audio-clips')
-            .upload(storagePath, binaryData, {
-              contentType: 'audio/mp4',
-              cacheControl: '3600',
-              upsert: false,
-            });
-
-          if (uploadError) {
-            throw new Error(uploadError instanceof Error ? uploadError.message : 'Upload failed');
-          }
-          
-          uploadSuccess = true;
-          console.log('✅ Audio uploaded successfully');
-        } catch (uploadError) {
-          retryCount++;
-          console.error(`Upload attempt ${retryCount} failed:`, uploadError);
-          
-          if (retryCount >= maxRetries) {
-            const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown error';
-            throw new Error(`Upload failed after ${maxRetries} attempts: ${errorMessage}`);
-          }
-          
-          // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-        }
-      }
-
-      // Verify the uploaded file
-      const { data: fileData, error: verifyError } = await supabase.storage
-        .from('audio-clips')
-        .download(storagePath);
-
-      if (verifyError || !fileData) {
-        console.error('File verification failed:', verifyError);
-        throw new Error('Uploaded file could not be verified');
-      }
-
-      console.log(`✅ File verified: ${fileData.size} bytes`);
-
-      // Create audio upload record
-      const { data: audioUpload, error: dbError } = await supabase
-        .from('audio_uploads')
-        .insert({
-          user_id: userId,
-          path: storagePath,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (dbError || !audioUpload) {
-        console.error('Database error:', dbError);
-        throw new Error(`Database error: ${dbError?.message}`);
-      }
-
-      audioUploadId = audioUpload.id;
-      console.log(`📝 Created audio record ${audioUpload.id}`);
-
-      // Trigger BirdNET analysis via Edge Function
-      const { error: functionError } = await supabase.functions.invoke('birdnet-analyze', {
-        body: {
-          audioId: audioUpload.id,
-          storagePath,
-        },
-      });
-
-      if (functionError) {
-        console.error('Edge Function error:', functionError);
-        // Update status to failed but don't throw - the upload succeeded
-        await supabase
-          .from('audio_uploads')
-          .update({ 
-            status: 'failed',
-            error_message: functionError.message,
-          })
-          .eq('id', audioUpload.id);
-      }
-
-      console.log('🔍 BirdNET analysis initiated');
+      const storagePath = `${user!.id}/${timestamp}.m4a`;
+      const binary = Uint8Array.from(atob(fileData), c => c.charCodeAt(0));
+      const { error: uploadError } = await supabase.storage.from('audio-clips').upload(storagePath, binary, { contentType: 'audio/mp4', upsert: false });
+      if (uploadError) throw new Error(uploadError.message);
+      // Create audio_uploads record
+      const { data: audioUpload, error: dbError } = await supabase.from('audio_uploads').insert({ user_id: user!.id, path: storagePath, status: 'pending' }).select().single();
+      if (dbError || !audioUpload) throw new Error(dbError?.message || 'Failed to create audio_uploads record');
+      // Trigger BirdNET analysis
+      const { error: fnError } = await supabase.functions.invoke('birdnet-analyze', { body: { audioId: audioUpload.id, storagePath } });
+      if (fnError) throw new Error(fnError.message);
       setRecordingStatus('completed');
-
-      return audioUpload.id;
+      return fileUri;
     } catch (error) {
-      console.error('Failed to process recording:', error);
       setRecordingStatus('error');
-      
-      const errorDetails = error instanceof Error ? error.message : 'Unknown error';
-      setLastError({
-        code: 'PROCESSING_FAILED',
-        message: 'Failed to process recording',
-        details: errorDetails,
-        isRecoverable: true,
-      });
-
-      // If we created an audio record but processing failed, mark it as failed
-      if (audioUploadId) {
-        await supabase
-          .from('audio_uploads')
-          .update({ 
-            status: 'failed',
-            error_message: errorDetails,
-          })
-          .eq('id', audioUploadId);
-      }
-
+      setLastError({ code: 'PROCESSING_FAILED', message: 'Failed to process/upload/trigger analysis', details: error instanceof Error ? error.message : 'Unknown error', isRecoverable: true });
       throw error;
     }
-  }, [recorder, validateAudioFile, lastError]);
+  }, [recording, user]);
 
-  /**
-   * Reset recorder to idle state
-   */
+  useEffect(() => {
+    checkPermissions();
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [checkPermissions]);
+
   const reset = useCallback(() => {
     setRecordingStatus('idle');
     setDuration(0);
     setLastError(null);
+    setUri(null);
+    setRecording(null);
   }, []);
 
   return {
-    isRecording: recorder.isRecording,
-    recordingStatus,
-    duration,
-    uri: recorder.uri,
-    permissionStatus,
-    lastError,
+    isRecording: recordingStatus === 'recording',
+    uri,
     start,
     stop,
     reset,
     checkPermissions,
     requestPermissions,
+    recordingStatus,
+    duration,
+    permissionStatus,
+    lastError,
   };
 }; 
