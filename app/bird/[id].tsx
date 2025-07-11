@@ -283,7 +283,7 @@ export default function BirdDetailScreen() {
               {(kazakhName || englishName) && (
                 <View style={styles.sectionCard}>
                   <ThemedText type="title" style={styles.sectionTitle}>
-                    Имена птицы
+                    Названия
                   </ThemedText>
                   <View style={styles.sectionDivider} />
                   {kazakhName && (

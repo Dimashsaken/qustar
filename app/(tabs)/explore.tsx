@@ -78,9 +78,9 @@ export default function ExploreScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>Поиск птиц</Text>
+            <Text style={styles.title}>Определитель</Text>
             <Text style={styles.subtitle}>
-              Определите птицу по её характеристикам
+             Помощник в поиске вида по характеристикам
             </Text>
           </View>
 

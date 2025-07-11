@@ -29,9 +29,6 @@ export const SizeFilter: React.FC<SizeFilterProps> = ({
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Размер птицы</Text>
-      <Text style={styles.subtitle}>
-        Выберите размер, похожий на этот
-      </Text>
       
       <View style={styles.sizeGrid}>
         {SIZE_OPTIONS.map((size) => {
@@ -87,6 +84,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.light.text,
     marginBottom: DesignTokens.spacing.xs,
+    paddingBottom: DesignTokens.spacing.md,
   },
   subtitle: {
     fontSize: 14,

@@ -195,8 +195,6 @@ export default function SettingsScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Приложение
             </ThemedText>
-            {renderSettingItem('Язык', 'globe')}
-            {renderSettingItem('Темная тема', 'moon.fill')}
             {/* Credits/About */}
             {renderSettingItem('благодарности', 'info.circle', () => router.push('/credits'))}
           </ThemedView>
@@ -229,7 +227,7 @@ export default function SettingsScreen() {
             </ThemedText>
             {renderSettingItem('Обратная связь', 'envelope.fill', handleOpenFeedback)}
             {renderSettingItem('Политика конфиденциальности', 'doc.text', () => router.push('/privacy-policy'))}
-            {renderSettingItem('О приложении', 'info.circle')}
+            {renderSettingItem('О приложении', 'info.circle', () => router.push('/about'))}
           </ThemedView>
 
           {/* Logout Button */}

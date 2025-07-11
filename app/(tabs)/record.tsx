@@ -9,15 +9,15 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Modal,
-    Platform,
-    Pressable,
-    StatusBar as RNStatusBar,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  Modal,
+  Platform,
+  Pressable,
+  StatusBar as RNStatusBar,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
@@ -515,12 +515,6 @@ export default function RecordScreen() {
             </>
           ) : (
             <View style={styles.emptyStateContainer}>
-              <Ionicons 
-                name="mic-outline" 
-                size={64} 
-                color={Colors.light.tint} 
-                style={styles.emptyStateIcon} 
-              />
               <Text style={styles.emptyStateText}>
                 Пока нет записей
               </Text>
