@@ -197,6 +197,8 @@ export default function SettingsScreen() {
             </ThemedText>
             {renderSettingItem('Язык', 'globe')}
             {renderSettingItem('Темная тема', 'moon.fill')}
+            {/* Credits/About */}
+            {renderSettingItem('благодарности', 'info.circle', () => router.push('/credits'))}
           </ThemedView>
 
           {/* Account Settings */}
