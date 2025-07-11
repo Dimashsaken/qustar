@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Modal,
     Platform,
@@ -22,6 +23,38 @@ import { Colors, DesignTokens } from '../constants/Colors';
 import { useAuth } from '../hooks/useAuth';
 
 /**
+ * Hook for deleting the authenticated user's account via Supabase Edge Function
+ * @returns Object with deleteAccount function and loading state
+ */
+export const useDeleteAccount = () => {
+  const { session, signOut } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  const deleteAccount = async (): Promise<{ error?: string }> => {
+    if (!session?.access_token) return { error: 'Not authenticated' };
+    setLoading(true);
+    try {
+      const res = await fetch('https://odmfmyrdaisfboswcidq.functions.supabase.co/delete-account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) return { error: data.error || 'Failed to delete account' };
+      await signOut();
+      return {};
+    } catch (e) {
+      return { error: 'Network error' };
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { deleteAccount, loading };
+};
+
+/**
  * Settings screen with app preferences and logout functionality
  * @returns JSX.Element - Settings screen component
  */
@@ -29,6 +62,7 @@ export default function SettingsScreen() {
   const { signOut } = useAuth();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const { deleteAccount, loading: deletingAccount } = useDeleteAccount();
 
   /**
    * Handles back navigation
@@ -90,6 +124,33 @@ export default function SettingsScreen() {
   };
 
   /**
+   * Handles delete account with confirmation
+   */
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Удалить аккаунт',
+      'Вы уверены, что хотите удалить свой аккаунт? Это действие необратимо.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Удалить',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await deleteAccount();
+            if (error) {
+              Alert.alert('Ошибка', error);
+            } else {
+              Alert.alert('Аккаунт удалён', 'Ваш аккаунт был успешно удалён.');
+              // Optionally navigate to auth screen
+              router.replace('/auth');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  /**
    * Renders settings item
    */
   const renderSettingItem = (
@@ -144,6 +205,19 @@ export default function SettingsScreen() {
               Аккаунт
             </ThemedText>
             {renderSettingItem('Изменить пароль', 'key.fill', handleOpenChangePassword)}
+            <Pressable
+              style={[styles.settingItem, { borderBottomWidth: 0 }]}
+              onPress={handleDeleteAccount}
+              disabled={deletingAccount}
+            >
+              <View style={styles.settingItemLeft}>
+                <IconSymbol name="trash" size={20} color={Colors.light.error} />
+                <ThemedText type="default" style={[styles.settingText, { color: Colors.light.error }]}>Удалить аккаунт</ThemedText>
+              </View>
+              {deletingAccount ? (
+                <ActivityIndicator size="small" color={Colors.light.error} />
+              ) : null}
+            </Pressable>
           </ThemedView>
 
           {/* Help & Support */}
