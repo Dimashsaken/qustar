@@ -13,10 +13,12 @@
 
       "bundleIdentifier": "com.dimash-saken.qustar",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record bird sounds for identification."
       }
     },
     "android": {
+      "supportsTablet": false,
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.RECORD_AUDIO",
