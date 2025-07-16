@@ -25,6 +25,12 @@ const CreditsScreen: React.FC = () => (
         Было взято с книги "Полевой определитель птиц Казахстана" с разрешением от авторов
       </ThemedText>
       <View style={styles.sectionSpacer} />
+      <ThemedText style={styles.sectionTitle}>Звуки птиц</ThemedText>
+      <ThemedText style={styles.text}>
+        Звуковые записи птиц предоставлены сообществом Xeno Canto (xeno-canto.org){"\n"}
+        © Xeno Canto Foundation - открытая коллекция звуков птиц со всего мира
+      </ThemedText>
+      <View style={styles.sectionSpacer} />
       <ThemedText style={styles.sectionTitle}>Разработчик</ThemedText>
       <ThemedText style={styles.text}>
         Разработчик: Динмухаммед Сакен, Казахстан
