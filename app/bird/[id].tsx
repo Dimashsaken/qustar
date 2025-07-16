@@ -4,6 +4,7 @@ import React from 'react';
 import { ActivityIndicator, Alert, Dimensions, KeyboardAvoidingView, Linking, Platform, Pressable, StatusBar as RNStatusBar, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BirdImage } from '../../components/BirdImage';
 import { BirdMap } from '../../components/BirdMap';
+import { BirdSoundButton } from '../../components/BirdSoundButton';
 import { CommentsList } from '../../components/CommentsList';
 import { ThemedText } from '../../components/ThemedText';
 import { Colors, DesignTokens } from '../../constants/Colors';
@@ -219,51 +220,62 @@ export default function BirdDetailScreen() {
                     )}
                   </View>
                   
-                  {/* Video button next to name */}
-                  <Pressable 
-                    style={styles.videoButton} 
-                    onPress={() => handleVideoPress(bird)}
-                    accessibilityLabel="Открыть видео птицы на YouTube"
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.videoButtonIcon}>▶</Text>
-                  </Pressable>
+                  {/* Action buttons next to name */}
+                  <View style={styles.actionButtons}>
+                    {/* Sound button */}
+                    <BirdSoundButton
+                      scientificName={bird.scientific_name}
+                      commonName={bird.common_name_en}
+                      size={44}
+                      style={styles.soundButton}
+                    />
+                    
+                    {/* Video button */}
+                    <Pressable 
+                      style={styles.videoButton} 
+                      onPress={() => handleVideoPress(bird)}
+                      accessibilityLabel="Открыть видео птицы на YouTube"
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.videoButtonIcon}>▶</Text>
+                    </Pressable>
 
-                                   {/* Favorite button */}
-                   <Pressable 
-                     style={styles.favoriteButton} 
-                     onPress={async () => {
-                       if (!isAuthenticated) {
-                         Alert.alert(
-                           'Вход в систему',
-                           'Для добавления птиц в избранное необходимо войти в систему',
-                           [
-                             { text: 'Отмена', style: 'cancel' },
-                             { text: 'Войти', onPress: () => {
-                               router.push('/(tabs)/favorites' as any);
-                             }},
-                           ]
-                         );
-                         return;
-                       }
-                       
-                       try {
-                         await toggleFavorite(bird);
-                       } catch (error) {
-                         Alert.alert('Ошибка', (error as Error).message);
-                       }
-                     }}
-                     disabled={isAdding || isRemoving}
-                     accessibilityLabel={isFavorite(bird.id) ? 'Удалить из избранного' : 'Добавить в избранное'}
-                     accessibilityRole="button"
-                   >
-                     <Text style={[
-                       styles.favoriteButtonIcon,
-                       (isAdding || isRemoving) && { opacity: 0.5 }
-                     ]}>
-                       {isFavorite(bird.id) ? '❤️' : '🤍'}
-                     </Text>
-                   </Pressable>
+                    {/* Favorite button */}
+                    <Pressable 
+                      style={styles.favoriteButton} 
+                      onPress={async () => {
+                        if (!isAuthenticated) {
+                          Alert.alert(
+                            'Вход в систему',
+                            'Для добавления птиц в избранное необходимо войти в систему',
+                            [
+                              { text: 'Отмена', style: 'cancel' },
+                              { text: 'Войти', onPress: () => {
+                                router.push('/(tabs)/favorites' as any);
+                              }},
+                            ]
+                          );
+                          return;
+                        }
+                        
+                        try {
+                          await toggleFavorite(bird);
+                        } catch (error) {
+                          Alert.alert('Ошибка', (error as Error).message);
+                        }
+                      }}
+                      disabled={isAdding || isRemoving}
+                      accessibilityLabel={isFavorite(bird.id) ? 'Удалить из избранного' : 'Добавить в избранное'}
+                      accessibilityRole="button"
+                    >
+                      <Text style={[
+                        styles.favoriteButtonIcon,
+                        (isAdding || isRemoving) && { opacity: 0.5 }
+                      ]}>
+                        {isFavorite(bird.id) ? '❤️' : '🤍'}
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               </View>
               
@@ -529,6 +541,17 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   
+  // Action buttons container
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  // Sound button
+  soundButton: {
+    marginRight: DesignTokens.spacing.sm,
+  },
+  
   // Video button
   videoButton: {
     width: 44,
@@ -538,6 +561,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...DesignTokens.shadows.card,
+    marginRight: DesignTokens.spacing.sm,
   },
   videoButtonIcon: {
     color: Colors.light.surface,
@@ -555,7 +579,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...DesignTokens.shadows.card,
-    marginLeft: DesignTokens.spacing.md,
   },
   favoriteButtonIcon: {
     fontSize: 18,
