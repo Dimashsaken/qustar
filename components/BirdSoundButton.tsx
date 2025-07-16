@@ -76,6 +76,19 @@ export const BirdSoundButton: React.FC<BirdSoundButtonProps> = ({
       return;
     }
 
+    // Show specific audio error if exists
+    if (audioState.error) {
+      Alert.alert(
+        'Ошибка воспроизведения',
+        audioState.error,
+        [
+          { text: 'Попробовать снова', onPress: () => playSound(audioState.currentSoundIndex) },
+          { text: 'Отмена', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+
     // Toggle play/pause
     try {
       if (audioState.isPlaying) {

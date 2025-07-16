@@ -111,7 +111,57 @@ export class XenoCantoApi {
   }
 
   /**
-   * Search for bird recordings by species name
+   * Normalize scientific name for better matching
+   * @param scientificName - Original scientific name
+   * @returns Normalized scientific name
+   */
+  private static normalizeScientificName(scientificName: string): string {
+    return scientificName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z\s]/g, '') // Remove non-alphabetic characters except spaces
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .split(' ')
+      .slice(0, 2) // Keep only genus and species
+      .join(' ');
+  }
+
+  /**
+   * Generate search variations for a scientific name
+   * @param scientificName - Original scientific name
+   * @returns Array of search variations
+   */
+  private static generateSearchVariations(scientificName: string): string[] {
+    const variations: string[] = [];
+    const normalized = this.normalizeScientificName(scientificName);
+    const parts = normalized.split(' ');
+    
+    if (parts.length >= 2) {
+      const [genus, species] = parts;
+      
+      // Add original normalized name
+      variations.push(normalized);
+      
+      // Add genus only search
+      variations.push(genus);
+      
+      // Add species only search
+      variations.push(species);
+      
+      // Add partial matches
+      if (genus.length > 3) {
+        variations.push(`${genus.slice(0, -1)}*`); // Partial genus
+      }
+      if (species.length > 3) {
+        variations.push(`${species.slice(0, -1)}*`); // Partial species
+      }
+    }
+    
+    return variations;
+  }
+
+  /**
+   * Search for bird recordings by species name with improved matching
    * @param scientificName - Scientific name of the bird (e.g., "Turdus migratorius")
    * @param options - Additional search options
    * @returns Promise<XenoCantoBirdSound[]> - Array of bird sounds
@@ -122,50 +172,113 @@ export class XenoCantoApi {
   ): Promise<XenoCantoBirdSound[]> {
     await this.enforceRateLimit();
 
-    try {
-      const { page = 1 } = options;
-      const query = encodeURIComponent(scientificName);
-      const url = `${this.BASE_URL}?query=${query}&page=${page}`;
+    const searchVariations = this.generateSearchVariations(scientificName);
+    console.log('Searching for bird sounds with variations:', searchVariations);
+    
+    // Try each variation until we find results
+    for (const variation of searchVariations) {
+      try {
+        const { page = 1 } = options;
+        const query = encodeURIComponent(variation);
+        const url = `${this.BASE_URL}?query=${query}&page=${page}`;
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'QuStar-BirdApp/1.0',
-        },
-      });
+        console.log('Trying search query:', variation);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'QuStar-BirdApp/1.0',
+          },
+        });
+
+        if (!response.ok) {
+          console.warn(`HTTP error for query "${variation}": ${response.status}`);
+          continue; // Try next variation
+        }
+
+        const data: XenoCantoResponse = await response.json();
+        
+        if (data.recordings && data.recordings.length > 0) {
+          console.log(`Found ${data.recordings.length} recordings for query "${variation}"`);
+          
+          // Convert to simplified format and filter for quality
+          const results = data.recordings
+            .filter(recording => {
+              // Filter for quality and valid file URLs
+              const hasValidQuality = recording.q && ['A', 'B', 'C', 'D'].includes(recording.q);
+              const hasValidFileUrl = recording.file && recording.file.startsWith('http');
+              return hasValidQuality && hasValidFileUrl;
+            })
+            .slice(0, 5) // Limit to first 5 results
+            .map(recording => ({
+              id: recording.id,
+              url: recording.url,
+              fileUrl: recording.file.replace('http:', 'https:'), // Force HTTPS
+              quality: recording.q,
+              length: recording.length,
+              location: recording.loc,
+              country: recording.cnt,
+              recordedBy: recording.rec,
+              date: recording.date,
+              speciesName: `${recording.gen} ${recording.sp}`,
+              englishName: recording.en,
+            }));
+          
+          if (results.length > 0) {
+            return results;
+          }
+        }
+        
+        // Add small delay between variation attempts
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+      } catch (error) {
+        console.warn(`Error searching with variation "${variation}":`, error);
+        continue; // Try next variation
       }
-
-      const data: XenoCantoResponse = await response.json();
-      
-      // Convert to simplified format and filter for quality
-      return data.recordings
-        .filter(recording => recording.q && ['A', 'B', 'C'].includes(recording.q))
-        .slice(0, 5) // Limit to first 5 results
-        .map(recording => ({
-          id: recording.id,
-          url: recording.url,
-          fileUrl: recording.file,
-          quality: recording.q,
-          length: recording.length,
-          location: recording.loc,
-          country: recording.cnt,
-          recordedBy: recording.rec,
-          date: recording.date,
-          speciesName: `${recording.gen} ${recording.sp}`,
-          englishName: recording.en,
-        }));
-    } catch (error) {
-      console.error('Xeno Canto API error:', error);
-      throw new Error('Failed to fetch bird sounds');
     }
+
+    // If no variations worked, return empty array
+    console.warn('No bird sounds found for any search variations of:', scientificName);
+    return [];
   }
 
   /**
-   * Search for bird recordings by common name
+   * Generate search variations for a common name
+   * @param commonName - Original common name
+   * @returns Array of search variations
+   */
+  private static generateCommonNameVariations(commonName: string): string[] {
+    const variations: string[] = [];
+    const normalized = commonName.trim().toLowerCase();
+    
+    // Add original name
+    variations.push(normalized);
+    
+    // Try without common words that might cause issues
+    const wordsToRemove = ['common', 'european', 'american', 'asian', 'african', 'northern', 'southern', 'eastern', 'western'];
+    let cleanedName = normalized;
+    wordsToRemove.forEach(word => {
+      cleanedName = cleanedName.replace(new RegExp(`\\b${word}\\b`, 'g'), '').trim();
+    });
+    if (cleanedName !== normalized && cleanedName.length > 2) {
+      variations.push(cleanedName);
+    }
+    
+    // Try individual words if name has multiple words
+    const words = normalized.split(' ').filter(word => word.length > 2);
+    if (words.length > 1) {
+      words.forEach(word => {
+        variations.push(word);
+      });
+    }
+    
+    return variations.filter(v => v.length > 2); // Remove very short variations
+  }
+
+  /**
+   * Search for bird recordings by common name with improved matching
    * @param commonName - Common name of the bird (e.g., "American Robin")
    * @param options - Additional search options
    * @returns Promise<XenoCantoBirdSound[]> - Array of bird sounds
@@ -176,46 +289,76 @@ export class XenoCantoApi {
   ): Promise<XenoCantoBirdSound[]> {
     await this.enforceRateLimit();
 
-    try {
-      const { page = 1 } = options;
-      const query = encodeURIComponent(commonName);
-      const url = `${this.BASE_URL}?query=${query}&page=${page}`;
+    const searchVariations = this.generateCommonNameVariations(commonName);
+    console.log('Searching for bird sounds by common name with variations:', searchVariations);
+    
+    // Try each variation until we find results
+    for (const variation of searchVariations) {
+      try {
+        const { page = 1 } = options;
+        const query = encodeURIComponent(variation);
+        const url = `${this.BASE_URL}?query=${query}&page=${page}`;
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'QuStar-BirdApp/1.0',
-        },
-      });
+        console.log('Trying common name search query:', variation);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'QuStar-BirdApp/1.0',
+          },
+        });
+
+        if (!response.ok) {
+          console.warn(`HTTP error for common name query "${variation}": ${response.status}`);
+          continue; // Try next variation
+        }
+
+        const data: XenoCantoResponse = await response.json();
+        
+        if (data.recordings && data.recordings.length > 0) {
+          console.log(`Found ${data.recordings.length} recordings for common name query "${variation}"`);
+          
+          // Convert to simplified format and filter for quality
+          const results = data.recordings
+            .filter(recording => {
+              // Filter for quality and valid file URLs
+              const hasValidQuality = recording.q && ['A', 'B', 'C', 'D'].includes(recording.q);
+              const hasValidFileUrl = recording.file && recording.file.startsWith('http');
+              return hasValidQuality && hasValidFileUrl;
+            })
+            .slice(0, 5) // Limit to first 5 results
+            .map(recording => ({
+              id: recording.id,
+              url: recording.url,
+              fileUrl: recording.file.replace('http:', 'https:'), // Force HTTPS
+              quality: recording.q,
+              length: recording.length,
+              location: recording.loc,
+              country: recording.cnt,
+              recordedBy: recording.rec,
+              date: recording.date,
+              speciesName: `${recording.gen} ${recording.sp}`,
+              englishName: recording.en,
+            }));
+          
+          if (results.length > 0) {
+            return results;
+          }
+        }
+        
+        // Add small delay between variation attempts
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+      } catch (error) {
+        console.warn(`Error searching with common name variation "${variation}":`, error);
+        continue; // Try next variation
       }
-
-      const data: XenoCantoResponse = await response.json();
-      
-      // Convert to simplified format and filter for quality
-      return data.recordings
-        .filter(recording => recording.q && ['A', 'B', 'C'].includes(recording.q))
-        .slice(0, 5) // Limit to first 5 results
-        .map(recording => ({
-          id: recording.id,
-          url: recording.url,
-          fileUrl: recording.file,
-          quality: recording.q,
-          length: recording.length,
-          location: recording.loc,
-          country: recording.cnt,
-          recordedBy: recording.rec,
-          date: recording.date,
-          speciesName: `${recording.gen} ${recording.sp}`,
-          englishName: recording.en,
-        }));
-    } catch (error) {
-      console.error('Xeno Canto API error:', error);
-      throw new Error('Failed to fetch bird sounds');
     }
+
+    // If no variations worked, return empty array
+    console.warn('No bird sounds found for any search variations of common name:', commonName);
+    return [];
   }
 
   /**

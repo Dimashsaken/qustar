@@ -51,7 +51,7 @@ export const useBirdSound = (
     error: null,
   });
 
-  // Fetch bird sounds from Xeno Canto API
+  // Fetch bird sounds from Xeno Canto API with improved error handling
   const {
     data: sounds = [],
     isLoading: isLoadingSounds,
@@ -64,24 +64,61 @@ export const useBirdSound = (
         return [];
       }
 
+      console.log('Fetching bird sounds for:', { scientificName, commonName });
+
       try {
-        // Try scientific name first, then common name
+        let results: XenoCantoBirdSound[] = [];
+        
+        // Try scientific name first with improved matching
         if (scientificName) {
-          const results = await XenoCantoApi.searchBySpecies(scientificName);
+          console.log('Searching by scientific name:', scientificName);
+          results = await XenoCantoApi.searchBySpecies(scientificName);
+          
           if (results.length > 0) {
+            console.log(`Found ${results.length} sounds by scientific name`);
             return results;
+          } else {
+            console.log('No sounds found by scientific name, trying common name...');
           }
         }
 
+        // Fallback to common name if scientific name fails
         if (commonName) {
-          const results = await XenoCantoApi.searchByCommonName(commonName);
-          return results;
+          console.log('Searching by common name:', commonName);
+          results = await XenoCantoApi.searchByCommonName(commonName);
+          
+          if (results.length > 0) {
+            console.log(`Found ${results.length} sounds by common name`);
+            return results;
+          } else {
+            console.log('No sounds found by common name either');
+          }
         }
 
+        // If both fail, try alternative approaches
+        if (scientificName && results.length === 0) {
+          console.log('Trying alternative search strategies...');
+          
+          // Try searching just the species name (second word)
+          const parts = scientificName.split(' ');
+          if (parts.length >= 2) {
+            const speciesOnly = parts[1];
+            console.log('Trying species name only:', speciesOnly);
+            results = await XenoCantoApi.searchByCommonName(speciesOnly);
+            
+            if (results.length > 0) {
+              console.log(`Found ${results.length} sounds by species name only`);
+              return results;
+            }
+          }
+        }
+
+        console.log('No bird sounds found for any search strategy');
         return [];
       } catch (error) {
         console.error('Failed to fetch bird sounds:', error);
-        throw error;
+        // Don't throw error, just return empty array to prevent app crash
+        return [];
       }
     },
     enabled: !!(scientificName || commonName),
@@ -206,9 +243,17 @@ export const useBirdSound = (
       // Small delay to ensure iOS audio session is ready
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Load and play new sound
+      const selectedSound = sounds[targetIndex];
+      console.log('Attempting to play sound:', selectedSound.fileUrl);
+
+      // Validate URL format
+      if (!selectedSound.fileUrl || !selectedSound.fileUrl.startsWith('http')) {
+        throw new Error('Invalid audio file URL');
+      }
+
+      // Load and play new sound with better error handling
       const sound = await Audio.Sound.createAsync(
-        { uri: sounds[targetIndex].fileUrl },
+        { uri: selectedSound.fileUrl },
         { 
           shouldPlay: true,
           isLooping: false,
@@ -216,18 +261,51 @@ export const useBirdSound = (
           // iOS specific settings to prevent seeking issues
           progressUpdateIntervalMillis: 100,
           positionMillis: 0,
+          // Add timeout and retry options
+          androidImplementation: 'MediaPlayer',
         },
         onPlaybackStatusUpdate
       );
 
       soundRef.current = sound.sound;
+      
+      // Verify sound loaded successfully
+      const status = await sound.sound.getStatusAsync();
+      if (!status.isLoaded) {
+        throw new Error('Sound failed to load properly');
+      }
+
     } catch (error) {
       console.error('Failed to play sound:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to play sound';
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      
+      if (errorMsg.includes('-11850') || errorMsg.includes('AVFoundationErrorDomain')) {
+        errorMessage = 'Audio file format not supported or corrupted';
+      } else if (errorMsg.includes('network') || errorMsg.includes('connection')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (errorMsg.includes('format') || errorMsg.includes('codec')) {
+        errorMessage = 'Audio format not supported.';
+      } else if (errorMsg.includes('Invalid') || errorMsg.includes('url')) {
+        errorMessage = 'Invalid audio file URL.';
+      } else if (errorMsg.includes('timeout')) {
+        errorMessage = 'Audio loading timeout. Please try again.';
+      }
+
       setAudioState(prev => ({
         ...prev,
+        isPlaying: false,
         isLoading: false,
-        error: 'Failed to play sound',
+        error: errorMessage,
       }));
+
+      // Try next sound if available and this isn't a network issue
+      if (sounds.length > 1 && targetIndex < sounds.length - 1 && !errorMsg.includes('network')) {
+        console.log('Trying next sound due to playback error...');
+        setTimeout(() => playSound(targetIndex + 1), 1000);
+      }
     }
   }, [sounds, audioState.currentSoundIndex, onPlaybackStatusUpdate]);
 
