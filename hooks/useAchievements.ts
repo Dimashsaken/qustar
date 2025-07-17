@@ -5,10 +5,10 @@
 
 import { useMemo } from 'react';
 import type {
-  Achievement,
-  RecorderRank,
-  RecorderRankInfo,
-  UserAchievements
+    Achievement,
+    RecorderRank,
+    RecorderRankInfo,
+    UserAchievements
 } from '../types/achievement';
 import type { DetectionWithAudio } from '../types/audio';
 

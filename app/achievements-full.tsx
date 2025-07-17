@@ -3,17 +3,17 @@
  * Complete view of user's achievements, ranks, and statistics
  */
 
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
-    Platform,
-    Pressable,
-    StatusBar as RNStatusBar,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    View,
+  Platform,
+  Pressable,
+  StatusBar as RNStatusBar,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { AchievementBadge } from '../components/AchievementBadge';
 import { ThemedText } from '../components/ThemedText';
@@ -27,6 +27,7 @@ import { useAuth } from '../hooks/useAuth';
 type FilterType = 'all' | 'unlocked' | 'locked';
 
 export default function AchievementsFullScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const { detections, isLoading: detectionsLoading } = useAudioDetections();
   const userAchievements = useAchievements(detections);
@@ -76,6 +77,19 @@ export default function AchievementsFullScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" backgroundColor="transparent" translucent />
+        {/* Header with back button */}
+        <View style={styles.header}>
+          <Pressable 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <IconSymbol name="chevron.left" size={24} color={Colors.light.primary} />
+          </Pressable>
+          <ThemedText type="title" style={styles.headerTitle}>
+            Достижения
+          </ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
         <View style={styles.loadingContainer}>
           <ThemedText type="default" style={styles.loadingText}>
             Загрузка достижений...
@@ -90,6 +104,20 @@ export default function AchievementsFullScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="dark" backgroundColor="transparent" translucent />
       <SafeAreaView style={styles.safeArea}>
+        {/* Header with back button */}
+        <View style={styles.header}>
+          <Pressable 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <IconSymbol name="chevron.left" size={24} color={Colors.light.primary} />
+          </Pressable>
+          <ThemedText type="title" style={styles.headerTitle}>
+            Достижения
+          </ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
+
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           {/* Recently Unlocked */}
           {userAchievements.recentlyUnlocked.length > 0 && (
@@ -142,6 +170,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
     paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingVertical: DesignTokens.spacing.md,
+    backgroundColor: Colors.light.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
+  backButton: {
+    padding: DesignTokens.spacing.xs,
+    marginRight: DesignTokens.spacing.sm,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    color: Colors.light.text,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40, // Same width as back button to center title
   },
   container: {
     flex: 1,
