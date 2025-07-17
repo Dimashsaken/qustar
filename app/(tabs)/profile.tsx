@@ -12,6 +12,7 @@ import {
   View
 } from 'react-native';
 import { AchievementNotification } from '../../components/AchievementNotification';
+import { RankProgress } from '../../components/RankProgress';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { IconSymbol } from '../../components/ui/IconSymbol';
@@ -117,26 +118,42 @@ export default function ProfileScreen() {
     <ThemedView style={styles.statsSection}>
       <View style={styles.statItem}>
         <ThemedText type="title" style={styles.statNumber}>
-          {favoritesCount}
+          {userAchievements.totalUnlocked}
         </ThemedText>
         <ThemedText type="default" style={styles.statLabel}>
-          Избранных птиц
+          Достижений получено
         </ThemedText>
       </View>
       <View style={styles.statItem}>
         <ThemedText type="title" style={styles.statNumber}>
-          {notesCount}
+          {userAchievements.stats.totalDetections}
         </ThemedText>
         <ThemedText type="default" style={styles.statLabel}>
-          Заметок
+          Всего записей
         </ThemedText>
       </View>
       <View style={styles.statItem}>
         <ThemedText type="title" style={styles.statNumber}>
-          {detectionsLoading ? '...' : detections.length}
+          {userAchievements.stats.uniqueSpecies}
         </ThemedText>
         <ThemedText type="default" style={styles.statLabel}>
-          Аудио записей
+          Уникальных видов
+        </ThemedText>
+      </View>
+      <View style={styles.statItem}>
+        <ThemedText type="title" style={styles.statNumber}>
+          {Math.round(userAchievements.stats.averageConfidence)}%
+        </ThemedText>
+        <ThemedText type="default" style={styles.statLabel}>
+          Средняя точность
+        </ThemedText>
+      </View>
+      <View style={styles.statItem}>
+        <ThemedText type="title" style={styles.statNumber}>
+          {userAchievements.stats.recordingStreak}
+        </ThemedText>
+        <ThemedText type="default" style={styles.statLabel}>
+          Дней подряд
         </ThemedText>
       </View>
       <View style={styles.statItem}>
@@ -330,6 +347,12 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           {renderProfileHeader()}
+          
+          {/* Rank Progress */}
+          <View style={styles.rankSection}>
+            <RankProgress rankInfo={userAchievements.recorderRank} />
+          </View>
+          
           {renderStats()}
           
           {renderAchievementsSection()}
@@ -361,6 +384,11 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  
+  // Rank section styles
+  rankSection: {
+    margin: DesignTokens.spacing.lg,
   },
   
   // Profile header styles
@@ -411,7 +439,7 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
-    minWidth: '22%',
+    minWidth: '30%',
     marginBottom: DesignTokens.spacing.sm,
   },
   statNumber: {

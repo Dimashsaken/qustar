@@ -3,7 +3,7 @@
  * Complete view of user's achievements, ranks, and statistics
  */
 
-import { router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
@@ -16,7 +16,6 @@ import {
     View,
 } from 'react-native';
 import { AchievementBadge } from '../components/AchievementBadge';
-import { RankProgress } from '../components/RankProgress';
 import { ThemedText } from '../components/ThemedText';
 import { ThemedView } from '../components/ThemedView';
 import { IconSymbol } from '../components/ui/IconSymbol';
@@ -43,76 +42,6 @@ export default function AchievementsFullScreen() {
         return true;
     }
   });
-
-  const renderHeader = () => (
-    <ThemedView style={styles.header}>
-      <Pressable onPress={() => router.back()} style={styles.backButton}>
-        <IconSymbol name="chevron.left" size={24} color={Colors.light.primary} />
-      </Pressable>
-      <ThemedText type="title" style={styles.headerTitle}>
-        Достижения
-      </ThemedText>
-      <View style={styles.headerSpace} />
-    </ThemedView>
-  );
-
-  const renderStatsOverview = () => (
-    <ThemedView style={styles.statsOverview}>
-      <ThemedText type="subtitle" style={styles.statsTitle}>
-        Общая статистика
-      </ThemedText>
-      <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
-          <ThemedText type="title" style={styles.statNumber}>
-            {userAchievements.totalUnlocked}
-          </ThemedText>
-          <ThemedText type="default" style={styles.statLabel}>
-            Достижений получено
-          </ThemedText>
-        </View>
-        <View style={styles.statCard}>
-          <ThemedText type="title" style={styles.statNumber}>
-            {userAchievements.stats.totalDetections}
-          </ThemedText>
-          <ThemedText type="default" style={styles.statLabel}>
-            Всего записей
-          </ThemedText>
-        </View>
-        <View style={styles.statCard}>
-          <ThemedText type="title" style={styles.statNumber}>
-            {userAchievements.stats.uniqueSpecies}
-          </ThemedText>
-          <ThemedText type="default" style={styles.statLabel}>
-            Уникальных видов
-          </ThemedText>
-        </View>
-        <View style={styles.statCard}>
-          <ThemedText type="title" style={styles.statNumber}>
-            {Math.round(userAchievements.stats.averageConfidence)}%
-          </ThemedText>
-          <ThemedText type="default" style={styles.statLabel}>
-            Средняя точность
-          </ThemedText>
-        </View>
-        <View style={styles.statCard}>
-          <ThemedText type="title" style={styles.statNumber}>
-            {userAchievements.stats.recordingStreak}
-          </ThemedText>
-          <ThemedText type="default" style={styles.statLabel}>
-            Дней подряд
-          </ThemedText>
-        </View>
-        <View style={styles.statCard}>
-          <ThemedText type="title" style={styles.statNumber}>
-            {Math.round(userAchievements.stats.bestConfidence)}%
-          </ThemedText>
-          <ThemedText type="default" style={styles.statLabel}>
-            Лучшая точность
-          </ThemedText>
-        </View>
-      </View>
-    </ThemedView>
-  );
 
   const renderFilter = () => (
     <View style={styles.filterContainer}>
@@ -147,7 +76,6 @@ export default function AchievementsFullScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" backgroundColor="transparent" translucent />
-        {renderHeader()}
         <View style={styles.loadingContainer}>
           <ThemedText type="default" style={styles.loadingText}>
             Загрузка достижений...
@@ -159,19 +87,10 @@ export default function AchievementsFullScreen() {
 
   return (
     <>
+      <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="dark" backgroundColor="transparent" translucent />
       <SafeAreaView style={styles.safeArea}>
-        {renderHeader()}
-        
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-          {/* Rank Progress */}
-          <View style={styles.section}>
-            <RankProgress rankInfo={userAchievements.recorderRank} />
-          </View>
-
-          {/* Statistics Overview */}
-          {renderStatsOverview()}
-
           {/* Recently Unlocked */}
           {userAchievements.recentlyUnlocked.length > 0 && (
             <ThemedView style={styles.recentSection}>
@@ -226,65 +145,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    backgroundColor: Colors.light.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  backButton: {
-    paddingRight: DesignTokens.spacing.md,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: Colors.light.text,
-    fontWeight: '600',
-  },
-  headerSpace: {
-    width: 24 + DesignTokens.spacing.md,
-  },
-  section: {
-    margin: DesignTokens.spacing.lg,
-  },
-  statsOverview: {
-    backgroundColor: Colors.light.surface,
-    padding: DesignTokens.spacing.lg,
-    marginTop: DesignTokens.spacing.sm,
-  },
-  statsTitle: {
-    color: Colors.light.text,
-    fontWeight: '600',
-    marginBottom: DesignTokens.spacing.md,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  statCard: {
-    width: '48%',
-    alignItems: 'center',
-    paddingVertical: DesignTokens.spacing.md,
-    paddingHorizontal: DesignTokens.spacing.sm,
-    backgroundColor: Colors.light.background,
-    borderRadius: DesignTokens.borderRadius.card,
-    marginBottom: DesignTokens.spacing.sm,
-  },
-  statNumber: {
-    color: Colors.light.primary,
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    color: Colors.light.textMuted,
-    fontSize: 12,
-    marginTop: DesignTokens.spacing.xs,
-    textAlign: 'center',
   },
   filterContainer: {
     flexDirection: 'row',

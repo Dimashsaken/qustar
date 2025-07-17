@@ -12,7 +12,6 @@ import {
     View
 } from 'react-native';
 import { DetectionCard } from '../components/DetectionCard';
-import { DetectionSummary } from '../components/DetectionSummary';
 import { ThemedText } from '../components/ThemedText';
 import { ThemedView } from '../components/ThemedView';
 import { IconSymbol } from '../components/ui/IconSymbol';
@@ -23,9 +22,7 @@ import type { DetectionWithAudio } from '../types/audio';
 /**
  * Data structure for FlashList items
  */
-type ListItem = 
-  | { type: 'summary' }
-  | { type: 'detection'; detection: DetectionWithAudio; index: number };
+type ListItem = { type: 'detection'; detection: DetectionWithAudio; index: number };
 
 /**
  * Full-screen detections page showing all user's bird detection history
@@ -119,11 +116,10 @@ export default function DetectionsFullScreen() {
   );
 
   /**
-   * Renders detections list with summary
+   * Renders detections list
    */
   const renderDetections = () => {
     const listData: ListItem[] = [
-      { type: 'summary' }, 
       ...detections.map((detection: DetectionWithAudio, index: number) => ({ 
         type: 'detection' as const, 
         detection, 
@@ -136,9 +132,6 @@ export default function DetectionsFullScreen() {
         <FlashList
           data={listData}
           renderItem={({ item }: { item: ListItem }) => {
-            if (item.type === 'summary') {
-              return <DetectionSummary detections={detections} />;
-            }
             return (
               <DetectionCard
                 detection={item.detection}
