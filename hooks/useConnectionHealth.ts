@@ -3,7 +3,7 @@
  * Monitors Supabase connection health and provides recovery mechanisms
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 interface ConnectionHealth {

@@ -1,7 +1,7 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { batchGenerateBirdImageUrls, fetchBirdMapUrl, generateBirdImageUrls } from '../lib/imageUtils';
-import { supabase } from '../lib/supabaseClient';
 import { generateSearchTerms, parseBirdNetSpecies } from '../lib/speciesMapping';
+import { supabase } from '../lib/supabaseClient';
 import type { Bird, BirdListItem, BirdSearchFilters } from '../types/bird';
 
 /**
