@@ -61,10 +61,18 @@ export const RankProgress: React.FC<RankProgressProps> = ({ rankInfo }) => {
         {rankInfo.nextRankThreshold && (
           <View style={styles.progressLabels}>
             <ThemedText type="default" style={styles.progressLabel}>
-              {rankInfo.currentProgress}
+              {rankInfo.title}
             </ThemedText>
             <ThemedText type="default" style={styles.progressLabel}>
-              {rankInfo.nextRankThreshold}
+              {rankInfo.nextRankTitle || 'Максимальный ранг'}
+            </ThemedText>
+          </View>
+        )}
+        
+        {!rankInfo.nextRankThreshold && (
+          <View style={[styles.progressLabels, styles.maxRankContainer]}>
+            <ThemedText type="default" style={[styles.progressLabel, styles.maxRankLabel]}>
+              Максимальный ранг достигнут!
             </ThemedText>
           </View>
         )}
@@ -142,5 +150,13 @@ const styles = StyleSheet.create({
   progressLabel: {
     color: Colors.light.textMuted,
     fontSize: 12,
+  },
+  maxRankLabel: {
+    textAlign: 'center',
+    color: Colors.light.primary,
+    fontWeight: 'bold',
+  },
+  maxRankContainer: {
+    justifyContent: 'center',
   },
 });

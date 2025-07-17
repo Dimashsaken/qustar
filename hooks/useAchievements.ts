@@ -214,6 +214,7 @@ const calculateRecorderRank = (highConfidenceCount: number): RecorderRankInfo =>
     color: config.color,
     currentProgress: highConfidenceCount,
     nextRankThreshold: nextThreshold,
+    nextRankTitle: nextRank ? RANK_CONFIG[nextRank].title : undefined,
     progressPercentage,
   };
 };

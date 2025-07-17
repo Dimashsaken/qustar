@@ -29,16 +29,14 @@ import { useFavorites } from '../../hooks/useFavorites';
  * @returns JSX.Element - Profile screen component
  */
 export default function ProfileScreen() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const { 
-    favorites, 
     isLoading: favoritesLoading, 
     error: favoritesError, 
     count: favoritesCount 
   } = useFavorites();
   
   const {
-    comments: userNotes,
     isLoading: notesLoading,
     error: notesError,
     count: notesCount
@@ -154,14 +152,6 @@ export default function ProfileScreen() {
         </ThemedText>
         <ThemedText type="default" style={styles.statLabel}>
           Дней подряд
-        </ThemedText>
-      </View>
-      <View style={styles.statItem}>
-        <ThemedText type="title" style={[styles.statNumber, { color: userAchievements.recorderRank.color }]}>
-          {userAchievements.recorderRank.title}
-        </ThemedText>
-        <ThemedText type="default" style={styles.statLabel}>
-          Текущий ранг
         </ThemedText>
       </View>
     </ThemedView>
@@ -343,7 +333,11 @@ export default function ProfileScreen() {
 
   return (
     <>
-      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <StatusBar 
+        style="light" 
+        backgroundColor={Colors.light.primary} 
+        translucent={false}
+      />
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           {renderProfileHeader()}

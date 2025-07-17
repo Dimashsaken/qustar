@@ -52,6 +52,7 @@ export interface RecorderRankInfo {
   color: string;
   currentProgress: number;
   nextRankThreshold: number | null;
+  nextRankTitle?: string;
   progressPercentage: number;
 }
 
