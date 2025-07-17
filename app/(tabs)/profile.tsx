@@ -2,19 +2,22 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import {
-    ActivityIndicator,
-    Platform,
-    Pressable,
-    StatusBar as RNStatusBar,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    View
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  StatusBar as RNStatusBar,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  View
 } from 'react-native';
+import { AchievementNotification } from '../../components/AchievementNotification';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { IconSymbol } from '../../components/ui/IconSymbol';
 import { Colors, DesignTokens } from '../../constants/Colors';
+import { useAchievementNotifications } from '../../hooks/useAchievementNotifications';
+import { useAchievements } from '../../hooks/useAchievements';
 import { useAudioDetections } from '../../hooks/useAudioDetections';
 import { useAuth } from '../../hooks/useAuth';
 import { useUserComments } from '../../hooks/useComments';
@@ -45,6 +48,14 @@ export default function ProfileScreen() {
     isLoading: detectionsLoading,
   } = useAudioDetections();
 
+  // Calculate achievements based on detections
+  const userAchievements = useAchievements(detections);
+  
+  // Handle achievement notifications
+  const { pendingNotification, dismissNotification } = useAchievementNotifications(
+    userAchievements.achievements
+  );
+
 
   /**
    * Handles favorites section press to show full page
@@ -59,6 +70,13 @@ export default function ProfileScreen() {
    */
   const handleNotesPress = () => {
     router.push('/notes-full' as any);
+  };
+
+  /**
+   * Handles achievements section press to show full page
+   */
+  const handleAchievementsPress = () => {
+    router.push('/achievements-full' as any);
   };
 
   /**
@@ -93,7 +111,7 @@ export default function ProfileScreen() {
   );
 
   /**
-   * Renders stats section
+   * Renders stats section with achievement-enhanced stats
    */
   const renderStats = () => (
     <ThemedView style={styles.statsSection}>
@@ -119,6 +137,14 @@ export default function ProfileScreen() {
         </ThemedText>
         <ThemedText type="default" style={styles.statLabel}>
           Аудио записей
+        </ThemedText>
+      </View>
+      <View style={styles.statItem}>
+        <ThemedText type="title" style={[styles.statNumber, { color: userAchievements.recorderRank.color }]}>
+          {userAchievements.recorderRank.title}
+        </ThemedText>
+        <ThemedText type="default" style={styles.statLabel}>
+          Текущий ранг
         </ThemedText>
       </View>
     </ThemedView>
@@ -221,6 +247,41 @@ export default function ProfileScreen() {
   };
 
   /**
+   * Renders achievements section with header that navigates to full page
+   */
+  const renderAchievementsSection = () => {
+    const achievementsCount = userAchievements.totalUnlocked;
+    const totalAchievements = userAchievements.achievements.length;
+
+    return (
+      <ThemedView style={styles.section}>
+        <Pressable style={styles.sectionHeaderClickable} onPress={handleAchievementsPress}>
+          <View style={styles.sectionTitleRow}>
+            <View style={[styles.iconContainer, { backgroundColor: Colors.light.warning }]}>
+              <IconSymbol 
+                name="trophy.fill" 
+                size={22} 
+                color={Colors.light.surface} 
+              />
+            </View>
+            <View style={styles.sectionContent}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Достижения
+              </ThemedText>
+              <ThemedText type="default" style={styles.sectionSubtitle}>
+                {achievementsCount > 0 ? `${achievementsCount} из ${totalAchievements} получено` : 'Нет достижений'}
+              </ThemedText>
+            </View>
+            <View style={styles.arrowContainer}>
+              <IconSymbol name="chevron.right" size={20} color={Colors.light.warning} />
+            </View>
+          </View>
+        </Pressable>
+      </ThemedView>
+    );
+  };
+
+  /**
    * Renders detections section with list display
    */
   const renderDetectionsSection = () => {
@@ -270,12 +331,23 @@ export default function ProfileScreen() {
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           {renderProfileHeader()}
           {renderStats()}
+          
+          {renderAchievementsSection()}
           {renderFavoritesSection()}
           {renderNotesSection()}
           {renderDetectionsSection()}
           
           {/* Additional profile sections can be added here */}
         </ScrollView>
+        
+        {/* Achievement Notification Overlay */}
+        {pendingNotification && (
+          <AchievementNotification
+            achievement={pendingNotification}
+            visible={!!pendingNotification}
+            onClose={dismissNotification}
+          />
+        )}
       </SafeAreaView>
     </>
   );
@@ -335,9 +407,12 @@ const styles = StyleSheet.create({
     paddingVertical: DesignTokens.spacing.lg,
     backgroundColor: Colors.light.surface,
     marginTop: DesignTokens.spacing.sm,
+    flexWrap: 'wrap',
   },
   statItem: {
     alignItems: 'center',
+    minWidth: '22%',
+    marginBottom: DesignTokens.spacing.sm,
   },
   statNumber: {
     color: Colors.light.primary,
