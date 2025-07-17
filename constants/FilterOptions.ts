@@ -1,8 +1,8 @@
 import type {
-    BodyTypeOption,
-    ColorOption,
-    HabitatOption,
-    SizeOption
+  BodyTypeOption,
+  ColorOption,
+  HabitatOption,
+  SizeOption
 } from '../types/filters';
 
 /**
@@ -58,6 +58,9 @@ export const COLOR_OPTIONS: ColorOption[] = [
   { id: 'blue', label: 'Синий', color: '#2563EB' },
   { id: 'yellow', label: 'Желтый', color: '#EAB308' },
   { id: 'green', label: 'Зеленый', color: '#16A34A' },
+  { id: 'pink', label: 'Розовый', color: '#EC4899' },
+  { id: 'brown', label: 'Коричневый', color: '#92400E' },
+  { id: 'orange', label: 'Оранжевый', color: '#EA580C' },
 ];
 
 /**

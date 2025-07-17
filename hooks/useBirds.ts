@@ -1,6 +1,7 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { batchGenerateBirdImageUrls, fetchBirdMapUrl, generateBirdImageUrls } from '../lib/imageUtils';
 import { supabase } from '../lib/supabaseClient';
+import { generateSearchTerms, parseBirdNetSpecies } from '../lib/speciesMapping';
 import type { Bird, BirdListItem, BirdSearchFilters } from '../types/bird';
 
 /**
@@ -85,50 +86,82 @@ const fetchBirdById = async (id: string): Promise<Bird | null> => {
 
 /**
  * Fetches bird details by BirdNet species name (scientific name)
- * @param speciesName - BirdNet species name (e.g., "Turdus_merula")
+ * Enhanced with better species name parsing and mapping
+ * @param speciesName - BirdNet species name (e.g., "Common Myna_Acridotheres tristis")
  * @returns Promise<Bird | null> - Full bird data or null if not found
  */
 const fetchBirdBySpeciesName = async (speciesName: string): Promise<Bird | null> => {
   if (!speciesName) return null;
 
-  // Convert BirdNet format (e.g., "Turdus_merula") to searchable format
-  const searchName = speciesName.replace(/_/g, ' ');
+  const parsed = parseBirdNetSpecies(speciesName);
+  const searchTerms = generateSearchTerms(speciesName);
   
-  // Try multiple search strategies
-  const searchQueries = [
-    // Direct scientific name match
-    `scientific_name.ilike.%${searchName}%`,
-    // Direct common name matches
-    `common_name_en.ilike.%${searchName}%`,
-    `common_name_ru.ilike.%${searchName}%`,
-    `common_name_kz.ilike.%${searchName}%`,
-  ];
+  console.log(`🔍 Searching for bird: "${speciesName}"`);
+  console.log(`🔍 Parsed - Common: "${parsed.commonName}", Scientific: "${parsed.scientificName}"`);
+  console.log(`🔍 Search terms: ${searchTerms.join(', ')}`);
 
-  // Also try searching by genus only if full species search fails
-  const genusPart = searchName.split(' ')[0];
-  if (genusPart && genusPart.length > 3) {
-    searchQueries.push(`scientific_name.ilike.${genusPart}%`);
-  }
-
-  // Try each search query
-  for (const query of searchQueries) {
+  // Strategy 1: Direct scientific name match (most reliable)
+  if (parsed.scientificName) {
     try {
       const { data, error } = await supabase
         .from('qustar-info')
         .select('*')
-        .or(query)
+        .ilike('scientific_name', `%${parsed.scientificName}%`)
         .limit(1);
-
+      
       if (!error && data && data.length > 0) {
+        console.log(`✅ Found bird by scientific name: ${data[0].common_name_en || data[0].scientific_name}`);
         return data[0];
       }
     } catch (err) {
-      console.warn(`Search query failed: ${query}`, err);
+      console.warn('Scientific name search failed:', err);
+    }
+  }
+
+  // Strategy 2: Search all name fields with all search terms
+  for (const term of searchTerms) {
+    if (term.length < 3) continue; // Skip very short terms
+    
+    try {
+      const { data, error } = await supabase
+        .from('qustar-info')
+        .select('*')
+        .or(`scientific_name.ilike.%${term}%,common_name_en.ilike.%${term}%,common_name_ru.ilike.%${term}%,common_name_kz.ilike.%${term}%,alternative_names.ilike.%${term}%`)
+        .limit(1);
+      
+      if (!error && data && data.length > 0) {
+        console.log(`✅ Found bird by term "${term}": ${data[0].common_name_en || data[0].scientific_name}`);
+        return data[0];
+      }
+    } catch (err) {
+      console.warn(`Search term "${term}" failed:`, err);
       continue;
     }
   }
 
-  console.log(`❌ No bird found for species: ${speciesName} (${searchName})`);
+  // Strategy 3: Genus-only search (last resort)
+  if (parsed.scientificName) {
+    const genus = parsed.scientificName.split(' ')[0];
+    if (genus && genus.length > 2) {
+      try {
+        const { data, error } = await supabase
+          .from('qustar-info')
+          .select('*')
+          .ilike('scientific_name', `${genus}%`)
+          .limit(1);
+        
+        if (!error && data && data.length > 0) {
+          console.log(`✅ Found bird by genus "${genus}": ${data[0].common_name_en || data[0].scientific_name}`);
+          return data[0];
+        }
+      } catch (err) {
+        console.warn(`Genus search "${genus}" failed:`, err);
+      }
+    }
+  }
+
+  console.log(`❌ No bird found for species: ${speciesName}`);
+  console.log(`❌ Tried terms: ${searchTerms.join(', ')}`);
   return null;
 };
 

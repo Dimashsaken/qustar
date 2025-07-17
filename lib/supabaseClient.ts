@@ -77,6 +77,20 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     params: {
       eventsPerSecond: 2, // Limit realtime events for performance
     },
+    // Enhanced real-time connection settings for better reliability
+    heartbeatIntervalMs: 30000, // 30 seconds heartbeat
+    reconnectAfterMs: (tries: number) => Math.min(1000 * Math.pow(2, tries), 30000), // Exponential backoff
+    encode: (payload: any, callback: (encoded: string) => void) => {
+      callback(JSON.stringify(payload));
+    },
+    decode: (payload: string, callback: (decoded: any) => void) => {
+      try {
+        callback(JSON.parse(payload));
+      } catch (err) {
+        console.error('❌ Real-time payload decode error:', err);
+        callback({});
+      }
+    },
   },
   global: {
     headers: {

@@ -9,6 +9,7 @@ import { useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { BirdDetection, DetectionWithAudio } from '../types/audio';
 import { useAuth } from './useAuth';
+import { useConnectionHealth } from './useConnectionHealth';
 
 /**
  * Grouped detections by audio recording
@@ -72,6 +73,7 @@ const fetchAudioDetections = async (userId: string): Promise<DetectionWithAudio[
 export const useAudioDetections = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { health, recoverConnection, updateHealth } = useConnectionHealth();
 
   // Query for fetching detections with reasonable caching
   const {
@@ -104,7 +106,7 @@ export const useAudioDetections = () => {
     });
   }, [queryClient, user?.id]);
 
-  // Real-time subscription for new detections
+  // Real-time subscription for new detections with robust error handling
   useEffect(() => {
     if (!user?.id) return;
 
@@ -112,52 +114,150 @@ export const useAudioDetections = () => {
 
     // Create stable channel name for user
     const channelName = `detection-updates-${user.id}`;
-    
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'detections',
-          filter: `user_id=eq.${user.id}`,
-        },
-        async (payload: any) => {
-          console.log('🔔 New detection received:', payload.new);
-          // Force immediate update
-          await forceRefetch();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'audio_uploads',
-          filter: `user_id=eq.${user.id}`,
-        },
-        async (payload: any) => {
-          console.log('🔔 Audio upload status updated:', payload.new);
-          // Force immediate update when upload status changes
-          await forceRefetch();
-        }
-      )
-      .subscribe((status: any) => {
-        console.log('🔔 Subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error');
-        }
-      });
+    let channel: any = null;
+    let isSubscribed = false;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    const reconnectDelay = 1000; // Start with 1 second
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    // Cleanup subscription
-    return () => {
-      console.log('🔔 Cleaning up detection subscription');
-      supabase.removeChannel(channel);
+    const setupSubscription = () => {
+      // Clean up existing channel if any
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+
+      channel = supabase
+        .channel(channelName, {
+          config: {
+            presence: {
+              key: user.id,
+            },
+            broadcast: {
+              self: true,
+            },
+          },
+        })
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'detections',
+            filter: `user_id=eq.${user.id}`,
+          },
+          async (payload: any) => {
+            console.log('🔔 New detection received:', payload.new);
+            // Force immediate update
+            await forceRefetch();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'audio_uploads',
+            filter: `user_id=eq.${user.id}`,
+          },
+          async (payload: any) => {
+            console.log('🔔 Audio upload status updated:', payload.new);
+            // Force immediate update when upload status changes
+            await forceRefetch();
+          }
+        )
+        .subscribe((status: any) => {
+          console.log('🔔 Subscription status:', status);
+          
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Real-time subscription active');
+            isSubscribed = true;
+            reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+            updateHealth(true); // Update connection health
+            
+            // Clear any pending reconnect timer
+            if (reconnectTimer) {
+              clearTimeout(reconnectTimer);
+              reconnectTimer = null;
+            }
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Real-time subscription error');
+            isSubscribed = false;
+            updateHealth(false); // Update connection health
+            
+            // Try to recover connection first (non-blocking)
+            recoverConnection().then((recovered) => {
+              if (!recovered && reconnectAttempts < maxReconnectAttempts) {
+                const delay = Math.min(reconnectDelay * Math.pow(2, reconnectAttempts), 30000); // Max 30 seconds
+                console.log(`🔄 Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+                
+                reconnectTimer = setTimeout(() => {
+                  reconnectAttempts++;
+                  setupSubscription();
+                }, delay);
+              } else if (!recovered) {
+                console.error('❌ Max reconnection attempts reached. Falling back to periodic polling.');
+                // Fallback to periodic polling
+                startPollingFallback();
+              }
+            }).catch((error) => {
+              console.error('❌ Connection recovery failed:', error);
+              startPollingFallback();
+            });
+          } else if (status === 'CLOSED') {
+            console.log('🔔 Subscription closed');
+            isSubscribed = false;
+            updateHealth(false); // Update connection health
+            
+            // Only attempt reconnection if it wasn't a manual close and connection might be recoverable
+            if (reconnectAttempts < maxReconnectAttempts && health.isConnected) {
+              const delay = Math.min(reconnectDelay * Math.pow(2, reconnectAttempts), 30000);
+              console.log(`🔄 Connection closed, attempting to reconnect in ${delay}ms`);
+              
+              reconnectTimer = setTimeout(() => {
+                reconnectAttempts++;
+                setupSubscription();
+              }, delay);
+            } else if (!health.isConnected) {
+              console.log('🔄 Connection appears to be down, starting polling fallback');
+              startPollingFallback();
+            }
+          }
+        });
     };
-  }, [user?.id, forceRefetch]);
+
+    // Fallback polling mechanism
+    let pollingInterval: ReturnType<typeof setInterval> | null = null;
+    
+    const startPollingFallback = () => {
+      console.log('🔄 Starting polling fallback every 10 seconds');
+      pollingInterval = setInterval(async () => {
+        console.log('� Polling for new detections (fallback mode)');
+        await forceRefetch();
+      }, 10000); // Poll every 10 seconds
+    };
+
+    // Initialize subscription
+    setupSubscription();
+
+    // Cleanup function
+    return () => {
+      console.log('�🔔 Cleaning up detection subscription');
+      
+      // Clear timers
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+      
+      // Clean up channel
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [user?.id, forceRefetch, health, recoverConnection, updateHealth]);
 
   // Note: Real-time subscription handles updates, no periodic polling needed
 
