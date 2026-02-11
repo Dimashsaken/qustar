@@ -7,11 +7,13 @@ WORKDIR /app
 
 # Copy requirements first for better Docker layer caching
 COPY birdnet-api/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
 
 # Clone BirdNET-Analyzer
 RUN git clone --depth 1 https://github.com/birdnet-team/BirdNET-Analyzer BirdNET-Analyzer \
- && pip install --no-cache-dir ./BirdNET-Analyzer
+ && pip install --no-cache-dir ./BirdNET-Analyzer \
+ && pip install --no-cache-dir --force-reinstall -r requirements.txt
 
 # Download the BirdNET model file that the server expects
 RUN mkdir -p BirdNET-Analyzer/models \
